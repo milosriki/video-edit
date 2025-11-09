@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { VideoAnalysisResult } from '../types';
-import { EyeIcon, SmileIcon, TagIcon } from './icons';
+import { VideoFile, VideoAnalysisResult } from '../types';
+import { EyeIcon, SmileIcon, TagIcon, WandIcon, ScissorsIcon } from './icons';
 
 interface AnalysisResultCardProps {
-  result: VideoAnalysisResult;
-  thumbnail: string;
-  isExpanded: boolean;
-  onToggleExpand: () => void;
+  videoFile: VideoFile;
+  onGenerateBlueprints: () => void;
+  onOpenCutter: () => void;
 }
 
 const TabButton: React.FC<{ active: boolean; onClick: () => void; children: React.ReactNode }> = ({ active, onClick, children }) => (
@@ -20,33 +19,88 @@ const TabButton: React.FC<{ active: boolean; onClick: () => void; children: Reac
     </button>
 );
 
-
-const AnalysisResultCard: React.FC<AnalysisResultCardProps> = ({ result, thumbnail, isExpanded, onToggleExpand }) => {
+const AnalysisResultCard: React.FC<AnalysisResultCardProps> = ({ videoFile, onGenerateBlueprints, onOpenCutter }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<'scenes' | 'elements' | 'tone'>('scenes');
+  
+  const { status, analysisResult, thumbnail, id } = videoFile;
+  const result = analysisResult; // for brevity
+  
+  const isAnalyzed = status === 'analyzed' && result;
+  const isTopRanked = isAnalyzed && result.rank === 1;
 
-  const isTopRanked = result.rank === 1;
+  const renderStatusPill = () => {
+    switch (status) {
+      case 'processing':
+        return <span className="text-xs font-medium text-yellow-300 bg-yellow-900/50 px-2 py-1 rounded-full">Processing...</span>;
+      case 'analyzed':
+        return <span className="text-xs font-medium text-green-300 bg-green-900/50 px-2 py-1 rounded-full">Analyzed</span>;
+      case 'error':
+        return <span className="text-xs font-medium text-red-300 bg-red-900/50 px-2 py-1 rounded-full">Error</span>;
+      case 'pending':
+        return <span className="text-xs font-medium text-gray-300 bg-gray-700/50 px-2 py-1 rounded-full">Queued</span>;
+    }
+  };
 
   return (
-    <div className={`rounded-lg border-2 transition-all duration-300 ${isTopRanked ? 'bg-green-900/30 border-green-500' : 'bg-gray-900/50 border-gray-700'}`}>
+    <div className={`rounded-lg border-2 transition-all duration-300 ${isTopRanked ? 'bg-green-900/30 border-green-500' : 'bg-gray-900/50 border-gray-700'} ${!isAnalyzed && 'opacity-60'}`}>
         <div className="p-4">
             <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 text-center">
-                    <div className="text-3xl font-bold">#{result.rank}</div>
-                    {thumbnail && <img src={thumbnail} alt={result.fileName} className="w-24 h-24 object-cover rounded-md mt-2"/>}
+                {/* Thumbnail & Rank */}
+                <div className="flex-shrink-0 text-center w-24">
+                    {isAnalyzed ? (
+                      <div className="text-3xl font-bold">#{result.rank}</div>
+                    ) : (
+                      <div className="text-3xl font-bold text-gray-600">--</div>
+                    )}
+                    {thumbnail ? (
+                      <img src={thumbnail} alt={id} className="w-24 h-24 object-cover rounded-md mt-2"/>
+                    ) : (
+                      <div className="w-24 h-24 bg-gray-800 rounded-md mt-2 flex items-center justify-center">
+                        <FilmIcon className="w-10 h-10 text-gray-600"/>
+                      </div>
+                    )}
                 </div>
+                
+                {/* Info & Status */}
                 <div className="flex-grow">
-                    <h4 className="font-bold text-lg">{result.fileName}</h4>
-                    <p className="text-sm text-gray-400 mt-1"><strong className="text-gray-200">Summary:</strong> {result.summary}</p>
-                    <p className="text-sm text-gray-400 mt-1"><strong className="text-gray-200">Justification:</strong> {result.justification}</p>
-                    <button onClick={onToggleExpand} className="text-indigo-400 hover:text-indigo-300 text-sm font-semibold mt-2">
-                        {isExpanded ? 'Hide' : 'View'} Deep Analysis
-                    </button>
+                    <div className="flex justify-between items-start">
+                      <h4 className="font-bold text-lg max-w-xs truncate" title={id}>{id}</h4>
+                      {renderStatusPill()}
+                    </div>
+                    
+                    {isAnalyzed && (
+                      <>
+                        <p className="text-sm text-gray-400 mt-1"><strong className="text-gray-200">Summary:</strong> {result.summary}</p>
+                        <p className="text-sm text-gray-400 mt-1"><strong className="text-gray-200">Justification:</strong> {result.justification}</p>
+                        <button onClick={() => setIsExpanded(prev => !prev)} className="text-indigo-400 hover:text-indigo-300 text-sm font-semibold mt-2">
+                            {isExpanded ? 'Hide' : 'View'} Deep Analysis
+                        </button>
+                      </>
+                    )}
+                    {status === 'processing' && <p className="text-sm text-yellow-300 mt-2">AI is analyzing this video...</p>}
+                    {status === 'error' && <p className="text-sm text-red-300 mt-2">Could not process this video.</p>}
                 </div>
             </div>
+            
+            {/* Action Buttons */}
+            {isAnalyzed && (
+              <div className="mt-4 pt-4 border-t border-gray-700/50 flex flex-col sm:flex-row gap-3">
+                  <button onClick={onGenerateBlueprints} className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-105">
+                      <WandIcon className="w-5 h-5"/>
+                      Generate Ad Blueprints
+                  </button>
+                  <button onClick={onOpenCutter} className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-105">
+                      <ScissorsIcon className="w-5 h-5"/>
+                      Open Smart Cutter
+                  </button>
+              </div>
+            )}
         </div>
 
-        {isExpanded && (
-            <div className="bg-gray-900/40 p-4 border-t-2 border-dashed border-gray-700">
+        {/* Expanded Deep Analysis Panel */}
+        {isAnalyzed && isExpanded && (
+            <div className="bg-gray-900/40 p-4 border-t-2 border-dashed border-gray-700 animate-fade-in">
                 <div className="flex space-x-2 border-b border-gray-700 mb-4">
                     <TabButton active={activeTab === 'scenes'} onClick={() => setActiveTab('scenes')}>
                         <div className="flex items-center gap-2"><EyeIcon className="w-4 h-4" /> Scene Breakdown</div>
@@ -56,7 +110,7 @@ const AnalysisResultCard: React.FC<AnalysisResultCardProps> = ({ result, thumbna
                     </TabButton>
                     <TabButton active={activeTab === 'tone'} onClick={() => setActiveTab('tone')}>
                          <div className="flex items-center gap-2"><SmileIcon className="w-4 h-4" /> Emotional Tone</div>
-                    </TabButton>
+                    </Futton>
                 </div>
 
                 <div className="text-sm max-h-48 overflow-y-auto pr-2">
@@ -77,7 +131,7 @@ const AnalysisResultCard: React.FC<AnalysisResultCardProps> = ({ result, thumbna
                     )}
                     {activeTab === 'tone' && (
                          <div className="flex flex-wrap gap-2">
-                            {result.emotionalTone.map((tone, i) => <span key={i} className="bg-purple-800 text-purple-200 px-2 py-1 rounded-full">{tone}</span>)}
+                            {result.emotionalTone.map((tone, i) => <span keyi} className="bg-purple-800 text-purple-200 px-2 py-1 rounded-full">{tone}</span>)}
                         </div>
                     )}
                 </div>

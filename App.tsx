@@ -1,23 +1,14 @@
-
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { analyzeAndRankVideos, generateAdCreatives } from './services/geminiService';
 import { extractFramesFromVideo, generateVideoThumbnail } from './utils/video';
-import { AdCreative, VideoFile, VideoAnalysisResult } from './types';
+import { AdCreative, VideoFile, VideoAnalysisResult, ProcessingStatus } from './types';
 import { WandIcon, ClipboardIcon, CheckIcon, UploadIcon, FilmIcon, ScissorsIcon } from './components/icons';
 import VideoPlayer from './components/VideoPlayer';
 import VideoEditor from './components/VideoEditor';
 import AnalysisResultCard from './components/AnalysisResultCard';
 import AudioCutterDashboard from './components/AudioCutterDashboard';
 
-
-enum Stage {
-  Initial,
-  VideosSelected,
-  Analyzing,
-  Ranked,
-  Generating,
-  AdsReady,
-}
+// --- Reusable Components ---
 
 const Spinner: React.FC<{ text: string }> = ({ text }) => (
   <div className="flex flex-col items-center justify-center text-center p-8 bg-gray-800/50 rounded-lg">
@@ -29,6 +20,22 @@ const Spinner: React.FC<{ text: string }> = ({ text }) => (
     <p className="text-sm text-gray-400">This may take a few moments...</p>
   </div>
 );
+
+const AnimatedSection: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setIsVisible(true), 10);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <div
+      className={`transition-all duration-700 ease-in-out ${className} ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+    >
+      {children}
+    </div>
+  );
+};
 
 const AdCreativeCard: React.FC<{ adCreative: AdCreative; index: number; onCreateVideo: () => void; }> = ({ adCreative, index, onCreateVideo }) => {
     const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -43,27 +50,27 @@ const AdCreativeCard: React.FC<{ adCreative: AdCreative; index: number; onCreate
         <button
             onClick={() => copyToClipboard(text, field)}
             aria-label={`Copy ${field}`}
-            className="p-2 rounded-md hover:bg-indigo-500 text-gray-300 hover:text-white transition-colors absolute top-2 right-2"
+            className="p-2 rounded-md hover:bg-indigo-500 text-gray-300 hover:text-white transition-colors absolute top-2 right-2 opacity-0 group-hover:opacity-100"
         >
             {copiedField === field ? <CheckIcon className="w-5 h-5 text-green-400" /> : <ClipboardIcon className="w-5 h-5" />}
         </button>
     );
 
     return (
-        <div className="bg-gray-800 rounded-lg overflow-hidden border border-gray-700/50 flex flex-col">
+        <div className="bg-gray-800 rounded-lg overflow-hidden border border-gray-700/50 flex flex-col transition-all duration-300 hover:shadow-xl hover:border-indigo-500/50 hover:scale-[1.02]">
             <div className='p-6 bg-gray-800'>
               <h4 className="text-lg font-bold text-indigo-400">{adCreative.variationTitle}</h4>
-              <div className="relative bg-gray-900/50 p-4 rounded-md border border-gray-700 mt-4">
+              <div className="relative bg-gray-900/50 p-4 rounded-md border border-gray-700 mt-4 group">
                   <label className="text-xs font-semibold text-gray-400">HEADLINE</label>
                   <p className="text-lg text-white font-semibold mt-1">{adCreative.headline}</p>
                   {renderCopyButton(adCreative.headline, `headline-${index}`)}
               </div>
-              <div className="relative bg-gray-900/50 p-4 rounded-md border border-gray-700 mt-2">
+              <div className="relative bg-gray-900/50 p-4 rounded-md border border-gray-700 mt-2 group">
                   <label className="text-xs font-semibold text-gray-400">BODY</label>
                   <p className="text-base text-gray-300 mt-1">{adCreative.body}</p>
                   {renderCopyButton(adCreative.body, `body-${index}`)}
               </div>
-              <div className="relative bg-gray-900/50 p-4 rounded-md border border-gray-700 mt-2">
+              <div className="relative bg-gray-900/50 p-4 rounded-md border border-gray-700 mt-2 group">
                   <label className="text-xs font-semibold text-gray-400">CALL TO ACTION</label>
                   <p className="text-lg text-indigo-300 font-bold mt-1 tracking-wider">{adCreative.cta}</p>
                   {renderCopyButton(adCreative.cta, `cta-${index}`)}
@@ -89,7 +96,7 @@ const AdCreativeCard: React.FC<{ adCreative: AdCreative; index: number; onCreate
                 </div>
             </div>
             <div className="p-4 bg-gray-800 border-t border-gray-700/50">
-                <button onClick={onCreateVideo} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-all">
+                <button onClick={onCreateVideo} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-all hover:scale-105 transform hover:brightness-110">
                     <WandIcon className="w-5 h-5"/>
                     Create Video
                 </button>
@@ -98,160 +105,101 @@ const AdCreativeCard: React.FC<{ adCreative: AdCreative; index: number; onCreate
     );
 };
 
+// --- Main App Component (Parallel Processing Version) ---
 export default function App() {
-  const [stage, setStage] = useState<Stage>(Stage.Initial);
-  const [selectedFiles, setSelectedFiles] = useState<VideoFile[]>([]);
-  const [analysisResults, setAnalysisResults] = useState<VideoAnalysisResult[]>([]);
+  const [videoFiles, setVideoFiles] = useState<VideoFile[]>([]);
   const [adCreatives, setAdCreatives] = useState<AdCreative[]>([]);
   const [productInfo, setProductInfo] = useState<string>('A premium online personal training service for busy professionals, focusing on customized workout plans, nutrition coaching, and accountability to achieve significant fitness results.');
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // For global loading like ad generation
   const [loadingMessage, setLoadingMessage] = useState('');
-  const [topVideoUrl, setTopVideoUrl] = useState<string | null>(null);
 
+  // Modals
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isCutterOpen, setIsCutterOpen] = useState(false);
+  
+  // Payloads for Modals
   const [selectedCreative, setSelectedCreative] = useState<AdCreative | null>(null);
-  const [expandedAnalysis, setExpandedAnalysis] = useState<string | null>(null);
+  const [selectedVideoFile, setSelectedVideoFile] = useState<File | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    return () => {
-        if (topVideoUrl) {
-            URL.revokeObjectURL(topVideoUrl);
-        }
-    };
-  }, [topVideoUrl]);
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
-    setIsLoading(true);
-    setLoadingMessage('Processing thumbnails...');
     setError(null);
+    const newVideoFiles: VideoFile[] = [];
 
-    try {
-      const videoFilesPromises = Array.from(files)
-        .filter((file: File) => file.type.startsWith('video/'))
-        .map(async (file: File) => {
-          try {
-            const thumbnail = await generateVideoThumbnail(file);
-            return { file, id: file.name, thumbnail };
-          } catch (thumbError) {
-            console.error(`Could not generate thumbnail for ${file.name}:`, thumbError);
-            if (thumbError instanceof Error) {
-               setError(`Failed thumbnail for ${file.name}: ${thumbError.message}`);
-            }
-            return null;
-          }
+    // Create placeholder files
+    for (const file of Array.from(files)) {
+      if (file.type.startsWith('video/')) {
+        newVideoFiles.push({
+          file: file,
+          id: file.name,
+          thumbnail: '',
+          status: 'pending',
+          analysisResult: null
         });
+      }
+    }
+    
+    // Set placeholders immediately
+    setVideoFiles(prev => [...prev, ...newVideoFiles]);
+
+    // Process each new file
+    for (const videoFile of newVideoFiles) {
+      // 1. Update status to processing thumbnail
+      setVideoFiles(prev => prev.map(f => f.id === videoFile.id ? { ...f, status: 'processing' } : f));
       
-      const processedResults = await Promise.allSettled(videoFilesPromises);
-      const successfulFiles = processedResults
-        .filter((r): r is PromiseFulfilledResult<VideoFile> => r.status === 'fulfilled' && r.value !== null)
-        .map(r => r.value);
-      
-      const failedCount = processedResults.length - successfulFiles.length;
-      if (failedCount > 0) {
-        setError(`Could not process ${failedCount} video(s). They may be corrupted or in an unsupported format.`);
-      }
+      try {
+        // 2. Generate Thumbnail
+        const thumbnail = await generateVideoThumbnail(videoFile.file);
+        setVideoFiles(prev => prev.map(f => f.id === videoFile.id ? { ...f, thumbnail: thumbnail } : f));
 
-      setSelectedFiles(prevFiles => {
-         const existingIds = new Set(prevFiles.map(f => f.id));
-         const uniqueNewFiles = successfulFiles.filter(f => !existingIds.has(f.id));
-         return [...prevFiles, ...uniqueNewFiles];
-      });
+        // 3. Extract Frames
+        const frames = await extractFramesFromVideo(videoFile.file, 8);
+        
+        // 4. Get AI Analysis
+        // We pass 'frames' as a one-item array to the existing 'analyzeAndRankVideos'
+        // which returns an array of results. We expect one result back.
+        const analysis = await analyzeAndRankVideos([{ videoFile, frames }]);
+        
+        // 5. Mark as Analyzed
+        setVideoFiles(prev => prev.map(f => f.id === videoFile.id ? { 
+          ...f, 
+          status: 'analyzed',
+          analysisResult: analysis[0] // Add the analysis result to the file
+        } : f));
 
-      if (successfulFiles.length > 0) {
-        setStage(Stage.VideosSelected);
-      } else if (processedResults.length > 0) {
-        throw new Error("None of the selected videos could be processed.");
+      } catch (err) {
+        console.error(`Failed to process ${videoFile.id}:`, err);
+        setVideoFiles(prev => prev.map(f => f.id === videoFile.id ? { ...f, status: 'error' } : f));
+        if (err instanceof Error) {
+          setError(`Failed to process ${videoFile.id}: ${err.message}`);
+        } else {
+          setError(`An unknown error occurred while processing ${videoFile.id}.`);
+        }
       }
-
-    } catch (err) {
-       if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("An unknown error occurred while processing thumbnails.");
-      }
-    } finally {
-      setIsLoading(false);
-      setLoadingMessage('');
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+    }
+    
+    if (fileInputRef.current) {
+        fileInputRef.current.value = ""; // Clear input after processing
     }
   };
 
-
-  const handleAnalyzeAndRank = async () => {
-    if (selectedFiles.length === 0) return;
-    setIsLoading(true);
-    setStage(Stage.Analyzing);
-    setError(null);
-    if (topVideoUrl) {
-      URL.revokeObjectURL(topVideoUrl);
-      setTopVideoUrl(null);
-    }
-
-    try {
-      const videoFrameData = await Promise.all(
-        selectedFiles.map(async (videoFile, index) => {
-          setLoadingMessage(`Extracting frames from video ${index + 1}/${selectedFiles.length}...`);
-          const frames = await extractFramesFromVideo(videoFile.file, 8);
-          return { videoFile, frames };
-        })
-      );
-      
-      setLoadingMessage('AI is analyzing and ranking your videos...');
-      const results = await analyzeAndRankVideos(videoFrameData);
-      results.sort((a, b) => a.rank - b.rank);
-      setAnalysisResults(results);
-      
-      if (results.length > 0) {
-          setLoadingMessage('Loading top-ranked video...');
-          const topVideoName = results[0].fileName;
-          const topVideoFile = selectedFiles.find(f => f.file.name === topVideoName);
-          if (topVideoFile) {
-            const url = URL.createObjectURL(topVideoFile.file);
-            setTopVideoUrl(url);
-          }
-      }
-
-      setStage(Stage.Ranked);
-
-    } catch (err) {
-      if (err instanceof Error) {
-         if (err.message.includes("API key is not configured")) {
-           setError("The Gemini API key is not configured. Please contact the administrator.");
-         } else {
-           setError(err.message);
-         }
-      } else {
-        setError('An unknown error occurred during analysis.');
-      }
-      setStage(Stage.VideosSelected);
-    } finally {
-      setIsLoading(false);
-      setLoadingMessage('');
-    }
-  };
-
-  const handleGenerateVariations = async () => {
-    const topVideoResult = analysisResults[0];
-    if (!topVideoResult || !productInfo) return;
+  const handleGenerateVariations = async (videoFile: VideoFile) => {
+    if (!videoFile.analysisResult || !productInfo) return;
     
     setIsLoading(true);
-    setStage(Stage.Generating);
     setError(null);
     setLoadingMessage('AI is crafting your ad blueprints...');
 
     try {
-        const variations = await generateAdCreatives(topVideoResult, productInfo);
+        const variations = await generateAdCreatives(videoFile.analysisResult, productInfo);
         setAdCreatives(variations);
-        setStage(Stage.AdsReady);
+        // Scroll to the blueprints section
+        document.getElementById('ad-blueprints-section')?.scrollIntoView({ behavior: 'smooth' });
     } catch (err) {
         if (err instanceof Error) {
          if (err.message.includes("API key is not configured")) {
@@ -262,7 +210,6 @@ export default function App() {
       } else {
         setError('Failed to generate ad variations.');
       }
-        setStage(Stage.Ranked);
     } finally {
         setIsLoading(false);
         setLoadingMessage('');
@@ -270,42 +217,53 @@ export default function App() {
   };
   
   const handleReset = useCallback(() => {
-    setSelectedFiles([]);
-    setAnalysisResults([]);
+    setVideoFiles([]);
     setAdCreatives([]);
     setError(null);
-    if (topVideoUrl) {
-      URL.revokeObjectURL(topVideoUrl);
-      setTopVideoUrl(null);
-    }
-    setStage(Stage.Initial);
-  }, [topVideoUrl]);
+    setIsLoading(false);
+  }, []);
 
-  const topRankedFile = analysisResults.length > 0
-    ? selectedFiles.find(f => f.file.name === analysisResults[0].fileName)
-    : null;
-
-  const handleOpenEditor = (creative: AdCreative) => {
+  const handleOpenEditor = (creative: AdCreative, videoFile: File) => {
     setSelectedCreative(creative);
+    setSelectedVideoFile(videoFile);
     setIsEditorOpen(true);
   };
-  
-  const toggleAnalysisExpansion = (fileName: string) => {
-    setExpandedAnalysis(prev => (prev === fileName ? null : fileName));
+
+  const handleOpenCutter = (videoFile: File) => {
+    setSelectedVideoFile(videoFile);
+    setIsCutterOpen(true);
   };
+  
+  // Sort videos by status: processing, then analyzed (by rank), then pending, then error
+  const sortedVideoFiles = [...videoFiles].sort((a, b) => {
+    if (a.status === 'processing' && b.status !== 'processing') return -1;
+    if (a.status !== 'processing' && b.status === 'processing') return 1;
+
+    if (a.status === 'analyzed' && b.status !== 'analyzed') return -1;
+    if (a.status !== 'analyzed' && b.status === 'analyzed') return 1;
+
+    if (a.status === 'analyzed' && b.status === 'analyzed') {
+      return (a.analysisResult?.rank || 99) - (b.analysisResult?.rank || 99);
+    }
+    
+    if (a.status === 'pending' && b.status !== 'pending') return -1;
+    if (a.status !== 'pending' && b.status === 'pending') return 1;
+
+    return 0; // Keep same order for errors or same status
+  });
 
   return (
     <>
-      {isEditorOpen && selectedCreative && topRankedFile && (
+      {isEditorOpen && selectedCreative && selectedVideoFile && (
         <VideoEditor
           adCreative={selectedCreative}
-          sourceVideo={topRankedFile.file}
+          sourceVideo={selectedVideoFile}
           onClose={() => setIsEditorOpen(false)}
         />
       )}
-      {isCutterOpen && topRankedFile && (
+      {isCutterOpen && selectedVideoFile && (
         <AudioCutterDashboard
-          sourceVideo={topRankedFile.file}
+          sourceVideo={selectedVideoFile}
           onClose={() => setIsCutterOpen(false)}
         />
       )}
@@ -316,147 +274,118 @@ export default function App() {
               AI Video Command Center
             </h1>
             <p className="mt-3 text-lg text-gray-400 max-w-3xl mx-auto">
-              Analyze, edit, and generate complete video ad blueprints with a powerful AI strategist.
+              A unified dashboard for AI-powered video analysis, smart editing, and ad creation.
             </p>
           </header>
 
           {error && (
-              <div className="bg-red-900/50 border border-red-700 text-red-300 p-4 rounded-lg mb-6 flex justify-between items-center">
+              <div className="bg-red-900/50 border border-red-700 text-red-300 p-4 rounded-lg mb-6 flex justify-between items-center transition-all duration-300 ease-in-out">
                   <span><strong>Error:</strong> {error}</span>
-                  <button onClick={() => setError(null)} className="font-bold text-xl px-2">&times;</button>
+                  <button onClick={() => setError(null)} className="font-bold text-xl px-2 hover:text-white transition-colors">&times;</button>
               </div>
           )}
 
           <div className="bg-gray-800/50 rounded-2xl shadow-2xl p-6 sm:p-8 backdrop-blur-sm border border-gray-700/50">
-              {isLoading && <Spinner text={loadingMessage} />}
+              <div className="space-y-8">
+                  
+                  {/* --- STEP 1: SELECT VIDEOS --- */}
+                  <AnimatedSection>
+                    <div>
+                        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                          <span className={`bg-indigo-500 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold ring-2 ring-indigo-400 ring-offset-2 ring-offset-gray-800`}>1</span>
+                          Select Videos
+                        </h2>
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleFileSelect}
+                            multiple
+                            accept="video/*"
+                            className="hidden"
+                        />
+                        <div className="flex flex-wrap gap-4">
+                            <button onClick={() => fileInputRef.current?.click()} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all text-lg transform hover:scale-105 hover:brightness-110">
+                              <UploadIcon className="w-6 h-6" />
+                              Select from Device
+                            </button>
+                        </div>
+                    </div>
+                  </AnimatedSection>
 
-              {!isLoading && (
-                  <div className="space-y-8">
-                      
-                      <div>
-                          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                            <span className="bg-indigo-500 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">1</span>
-                            Select Videos {selectedFiles.length > 0 && `(${selectedFiles.length})`}
-                          </h2>
-                          <input
-                              type="file"
-                              ref={fileInputRef}
-                              onChange={handleFileSelect}
-                              multiple
-                              accept="video/*"
-                              className="hidden"
-                          />
-                          <div className="flex flex-wrap gap-4">
-                              <button onClick={() => fileInputRef.current?.click()} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all text-lg">
-                                <UploadIcon className="w-6 h-6" />
-                                Select from Device
-                              </button>
-                          </div>
-                          {selectedFiles.length > 0 && (
-                              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-6">
-                                  {selectedFiles.map(file => (
-                                      <div key={file.id} className="bg-gray-900/50 rounded-lg p-2 text-center text-sm">
-                                          <img src={file.thumbnail} alt={file.file.name} className="w-full h-24 object-cover rounded-md mb-2"/>
-                                          <p className="truncate text-gray-300">{file.file.name}</p>
-                                      </div>
-                                  ))}
-                              </div>
-                          )}
-                      </div>
-
-                      
-                      {stage >= Stage.VideosSelected && (
-                          <div>
-                              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                                <span className="bg-indigo-500 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">2</span>
-                                AI Deep Analysis & Ranking
-                              </h2>
-                              <button onClick={handleAnalyzeAndRank} disabled={selectedFiles.length === 0} className="w-full sm:w-auto bg-green-600 hover:bg-green-700 disabled:bg-green-900/80 disabled:cursor-not-allowed text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all text-lg">
-                                  <WandIcon className="w-6 h-6"/>
-                                  Start AI Analysis
-                              </button>
-                          </div>
-                      )}
-
-                      
-                      {stage >= Stage.Ranked && analysisResults.length > 0 && topRankedFile && (
-                          <div>
+                  
+                  {/* --- STEP 2: AI WORKSPACE --- */}
+                  {videoFiles.length > 0 && (
+                      <AnimatedSection>
+                        <div>
                             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                              <span className="bg-indigo-500 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">3</span>
-                              Workspace: "{topRankedFile.file.name}"
+                              <span className={`bg-indigo-500 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold ring-2 ring-indigo-400 ring-offset-2 ring-offset-gray-800`}>2</span>
+                              AI Workspace
                             </h2>
-                            <div className="grid lg:grid-cols-2 gap-8">
-                                <div>
-                                    {topVideoUrl && <VideoPlayer src={topVideoUrl} />}
-                                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <button onClick={() => setIsCutterOpen(true)} className="p-4 bg-gray-700 hover:bg-gray-600 rounded-lg text-left transition-colors">
-                                            <div className="flex items-center gap-3">
-                                                <ScissorsIcon className="w-8 h-8 text-indigo-400"/>
-                                                <div>
-                                                    <p className="font-bold text-white">Open Smart Cutter</p>
-                                                    <p className="text-sm text-gray-400">Edit video by removing silence or using keywords.</p>
-                                                </div>
-                                            </div>
-                                        </button>
-                                        <div className="mt-6 p-4 bg-gray-900/50 border border-gray-700 rounded-lg sm:col-span-2">
-                                            <p className="font-semibold text-lg mb-2">Generate Ad Blueprints</p>
-                                            <textarea
-                                                value={productInfo}
-                                                onChange={(e) => setProductInfo(e.target.value)}
-                                                placeholder="Tell the AI about your product/service..."
-                                                className="w-full p-3 bg-gray-900/70 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition h-28"
-                                            />
-                                            <button onClick={handleGenerateVariations} disabled={!productInfo.trim()} className="mt-4 w-full sm:w-auto bg-purple-600 hover:bg-purple-700 disabled:bg-purple-900/80 disabled:cursor-not-allowed text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all text-lg">
-                                                <WandIcon className="w-6 h-6"/>
-                                                Generate Ad Blueprints
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="space-y-4">
-                                    <h3 className="text-lg font-bold">AI Ranking & Analysis</h3>
-                                    {analysisResults.map(result => (
-                                        <AnalysisResultCard 
-                                            key={result.fileName} 
-                                            result={result} 
-                                            thumbnail={selectedFiles.find(f => f.file.name === result.fileName)?.thumbnail || ''}
-                                            isExpanded={expandedAnalysis === result.fileName}
-                                            onToggleExpand={() => toggleAnalysisExpansion(result.fileName)}
-                                        />
-                                    ))}
-                                </div>
+                            <div className="space-y-6">
+                                {sortedVideoFiles.map(videoFile => (
+                                    <AnalysisResultCard 
+                                        key={videoFile.id} 
+                                        videoFile={videoFile}
+                                        onGenerateBlueprints={() => handleGenerateVariations(videoFile)}
+                                        onOpenCutter={() => handleOpenCutter(videoFile.file)}
+                                    />
+                                ))}
                             </div>
-                          </div>
-                      )}
-                      
-                      {stage === Stage.AdsReady && adCreatives.length > 0 && (
-                          <div>
-                              <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
-                                <span className="bg-indigo-500 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">4</span>
-                                Your AI-Generated Ad Blueprints
-                              </h2>
-                              <div className="grid lg:grid-cols-2 gap-8">
-                                  {adCreatives.map((ad, i) => (
-                                      <AdCreativeCard 
-                                        key={i} 
-                                        adCreative={ad} 
-                                        index={i} 
-                                        onCreateVideo={() => handleOpenEditor(ad)}
-                                      />
-                                  ))}
-                              </div>
-                          </div>
-                      )}
+                        </div>
+                      </AnimatedSection>
+                  )}
+                  
+                  {/* --- STEP 3: AD BLUEPRINTS --- */}
+                  {isLoading && <Spinner text={loadingMessage} />}
+                  
+                  {!isLoading && adCreatives.length > 0 && (
+                      <AnimatedSection className="pt-8 border-t border-gray-700" id="ad-blueprints-section">
+                        <div>
+                            <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
+                              <span className="bg-indigo-500 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold ring-2 ring-indigo-400 ring-offset-2 ring-offset-gray-800">3</span>
+                              Your AI-Generated Ad Blueprints
+                            </h2>
+                            <div className="mb-6 p-4 bg-gray-900/50 border border-gray-700 rounded-lg">
+                                <label htmlFor="productInfo" className="block text-sm font-medium text-gray-300 mb-2">Product Information (Edit to regenerate)</label>
+                                <textarea
+                                    id="productInfo"
+                                    value={productInfo}
+                                    onChange={(e) => setProductInfo(e.target.value)}
+                                    placeholder="Tell the AI about your product/service..."
+                                    className="w-full p-3 bg-gray-900/70 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition h-28"
+                                />
+                                <p className="text-xs text-gray-400 mt-2">Click "Generate Ad Blueprints" on any video card to update these results with new info.</p>
+                            </div>
+                            <div className="grid lg:grid-cols-2 gap-8">
+                                {adCreatives.map((ad, i) => (
+                                    <AdCreativeCard 
+                                      key={i} 
+                                      adCreative={ad} 
+                                      index={i} 
+                                      onCreateVideo={() => {
+                                        // Find the video file this ad was generated from
+                                        const sourceFile = videoFiles.find(f => f.analysisResult?.fileName === ad.sourceFileName)?.file;
+                                        if (sourceFile) {
+                                          handleOpenEditor(ad, sourceFile);
+                                        } else {
+                                          setError("Could not find the original source video for this ad creative.");
+                                        }
+                                      }}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                      </AnimatedSection>
+                  )}
 
-                      {stage > Stage.Initial && (
-                          <div className="mt-8 text-center border-t border-gray-700 pt-6">
-                              <button onClick={handleReset} className="text-gray-400 hover:text-white underline transition-colors">
-                                  Start Over
-                              </button>
-                          </div>
-                      )}
-                  </div>
-              )}
+                  {videoFiles.length > 0 && (
+                      <div className="mt-8 text-center border-t border-gray-700 pt-6">
+                          <button onClick={handleReset} className="text-gray-400 hover:text-white underline transition-colors">
+                              Reset Workspace
+                          </button>
+                      </div>
+                  )}
+              </div>
           </div>
         </main>
         <footer className="text-center mt-8 text-gray-500 text-sm">

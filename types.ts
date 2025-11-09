@@ -17,10 +17,13 @@ export interface VideoFile {
     file: File;
     id: string; // using file.name for simplicity as a key
     thumbnail: string;
+    status: 'pending' | 'processing' | 'analyzed' | 'error';
+    analysisResult?: VideoAnalysisResult;
+    error?: string;
 }
 
 export interface VideoAnalysisResult {
-    rank: number;
+    rank: number; // Note: Rank will be assigned after all are processed.
     fileName: string;
     justification: string;
     summary: string;

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { extractAudio, calculateSilenceSegments, processVideoBySegments, calculateKeywordSegments } from '../services/videoProcessor';
 import { transcribeAudio } from '../services/geminiService';
 import { TranscribedWord } from '../types';
-import { DownloadIcon, ScissorsIcon, SoundWaveIcon, WandIcon } from './icons';
+import { DownloadIcon, ScissorsIcon, SoundWaveIcon } from './icons';
 
 interface AudioCutterDashboardProps {
   sourceVideo: File;
@@ -59,6 +59,7 @@ const AudioCutterDashboard: React.FC<AudioCutterDashboardProps> = ({ sourceVideo
     
     setIsProcessing(true);
     setError(null);
+    if(outputUrl) URL.revokeObjectURL(outputUrl);
     setOutputUrl(null);
     setProgress(0);
     setLoadingMessage('Calculating edit segments...');
@@ -73,7 +74,7 @@ const AudioCutterDashboard: React.FC<AudioCutterDashboardProps> = ({ sourceVideo
       }
       
       if (segments.length === 0) {
-        throw new Error(cutMode === 'silence' ? 'No silent segments found to remove.' : 'No segments found matching the specified keywords.');
+        throw new Error(cutMode === 'silence' ? 'No silent segments found to remove based on the threshold.' : 'No segments found matching the specified keywords.');
       }
 
       const outputBlob = await processVideoBySegments(
@@ -125,7 +126,7 @@ const AudioCutterDashboard: React.FC<AudioCutterDashboardProps> = ({ sourceVideo
   const renderContent = () => {
     if (isLoading) {
       return (
-        <div className="text-center p-8">
+        <div className="text-center p-8 flex flex-col justify-center items-center h-full">
           <svg className="animate-spin h-8 w-8 text-indigo-400 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
           <p className="text-lg font-semibold">{loadingMessage}</p>
         </div>
@@ -134,7 +135,7 @@ const AudioCutterDashboard: React.FC<AudioCutterDashboardProps> = ({ sourceVideo
     
     if (!transcription) {
       return (
-          <div className="text-center p-8">
+          <div className="text-center p-8 flex flex-col justify-center items-center h-full">
             <h3 className="text-lg font-semibold mb-4">Start by transcribing your video's audio.</h3>
             <p className="text-sm text-gray-400 mb-6">This allows the AI to analyze spoken words and silence for smart editing.</p>
             <button onClick={handleTranscribe} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all text-lg mx-auto">
@@ -160,31 +161,32 @@ const AudioCutterDashboard: React.FC<AudioCutterDashboardProps> = ({ sourceVideo
           <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700">
             <h4 className="font-bold mb-3">Editing Mode</h4>
             <div className="flex gap-2 mb-4">
-              <button onClick={() => setCutMode('silence')} className={`flex-1 p-2 rounded text-sm font-semibold ${cutMode === 'silence' ? 'bg-indigo-600' : 'bg-gray-700 hover:bg-gray-600'}`}>Remove Silence</button>
-              <button onClick={() => setCutMode('keywords')} className={`flex-1 p-2 rounded text-sm font-semibold ${cutMode === 'keywords' ? 'bg-indigo-600' : 'bg-gray-700 hover:bg-gray-600'}`}>Keep by Keywords</button>
+              <button onClick={() => setCutMode('silence')} className={`flex-1 p-2 rounded text-sm font-semibold transition-colors ${cutMode === 'silence' ? 'bg-indigo-600 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-300'}`}>Remove Silence</button>
+              <button onClick={() => setCutMode('keywords')} className={`flex-1 p-2 rounded text-sm font-semibold transition-colors ${cutMode === 'keywords' ? 'bg-indigo-600 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-300'}`}>Keep by Keywords</button>
             </div>
             
             {cutMode === 'silence' && (
               <div>
-                <label className="block text-sm font-medium text-gray-300">Silence Threshold (seconds)</label>
-                <input type="number" step="0.1" min="0.1" value={silenceThreshold} onChange={e => setSilenceThreshold(parseFloat(e.target.value))} className="w-full bg-gray-900 border border-gray-600 rounded p-2 mt-1 text-white"/>
+                <label htmlFor="silence-threshold" className="block text-sm font-medium text-gray-300">Silence Threshold (seconds)</label>
+                <input id="silence-threshold" type="number" step="0.1" min="0.1" value={silenceThreshold} onChange={e => setSilenceThreshold(parseFloat(e.target.value))} className="w-full bg-gray-900 border border-gray-600 rounded p-2 mt-1 text-white"/>
               </div>
             )}
             
             {cutMode === 'keywords' && (
               <div className="space-y-2">
                  <div>
-                    <label className="block text-sm font-medium text-gray-300">Start Word</label>
-                    <input type="text" value={startWord} onChange={e => setStartWord(e.target.value)} className="w-full bg-gray-900 border border-gray-600 rounded p-2 mt-1 text-white" placeholder="e.g., 'Welcome'"/>
+                    <label htmlFor="start-word" className="block text-sm font-medium text-gray-300">Start Word</label>
+                    <input id="start-word" type="text" value={startWord} onChange={e => setStartWord(e.target.value)} className="w-full bg-gray-900 border border-gray-600 rounded p-2 mt-1 text-white" placeholder="e.g., 'Welcome'"/>
                 </div>
                  <div>
-                    <label className="block text-sm font-medium text-gray-300">End Word</label>
-                    <input type="text" value={endWord} onChange={e => setEndWord(e.target.value)} className="w-full bg-gray-900 border border-gray-600 rounded p-2 mt-1 text-white" placeholder="e.g., 'Thanks'"/>
+                    <label htmlFor="end-word" className="block text-sm font-medium text-gray-300">End Word</label>
+                    <input id="end-word" type="text" value={endWord} onChange={e => setEndWord(e.target.value)} className="w-full bg-gray-900 border border-gray-600 rounded p-2 mt-1 text-white" placeholder="e.g., 'Thanks'"/>
                 </div>
               </div>
             )}
           </div>
           <button onClick={handleProcessVideo} disabled={isProcessing || (cutMode === 'keywords' && (!startWord || !endWord))} className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all text-lg">
+              <ScissorsIcon className="w-6 h-6" />
               Process Video
           </button>
         </div>
@@ -211,7 +213,7 @@ const AudioCutterDashboard: React.FC<AudioCutterDashboardProps> = ({ sourceVideo
             )}
              {!outputUrl && !error && !isProcessing && (
                 <div className="text-center text-gray-400">
-                    <p>Configure your settings and click "Process Video".</p>
+                    <p>Configure your settings and click "Process Video" to generate the edited version.</p>
                 </div>
               )}
          </div>
@@ -230,7 +232,7 @@ const AudioCutterDashboard: React.FC<AudioCutterDashboardProps> = ({ sourceVideo
           <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl">&times;</button>
         </header>
         <div className="flex-grow overflow-y-auto">
-          {error && <div className="p-4 bg-red-900/50 text-red-300 text-center">{error}</div>}
+          {error && <div className="p-4 bg-red-900/50 text-red-300 text-center" role="alert">{error}</div>}
           {renderContent()}
         </div>
       </div>
