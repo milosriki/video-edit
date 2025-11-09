@@ -76,7 +76,7 @@ export const analyzeAndRankVideos = async (videoFrameData: VideoFrameData[]): Pr
     return jsonResponse as VideoAnalysisResult[];
   } catch (error) {
     console.error("Failed to parse ranking response:", error, response.text);
-    throw new Error("Could not rank videos due to an invalid format from the AI.");
+    throw new Error("Failed to process the AI's analysis response due to an invalid format. Please try again.");
   }
 };
 
@@ -170,10 +170,13 @@ Strictly adhere to the JSON schema provided.
     if(jsonResponse.ads && Array.isArray(jsonResponse.ads)) {
         return jsonResponse.ads as AdCreative[];
     }
-    throw new Error("Generated JSON is missing the 'ads' array.");
+    throw new Error("The AI's ad creative response was missing the expected 'ads' data.");
   } catch (error) {
     console.error("Failed to parse ad variations response:", error, response.text);
-    throw new Error("Could not generate ad copy due to an invalid format from the AI.");
+    if (error instanceof Error && error.message.includes("'ads' data")) {
+        throw error;
+    }
+    throw new Error("Failed to process the AI's ad creative response due to an invalid format. Please try again.");
   }
 };
 
@@ -232,9 +235,12 @@ export const transcribeAudio = async (audioBlob: Blob): Promise<TranscribedWord[
     if (jsonResponse.transcription && Array.isArray(jsonResponse.transcription)) {
       return jsonResponse.transcription as TranscribedWord[];
     }
-    throw new Error("Transcription response is in an invalid format.");
+    throw new Error("The AI's transcription response was missing the expected 'transcription' data.");
   } catch (error) {
     console.error("Failed to parse transcription response:", error, response.text);
-    throw new Error("Could not transcribe audio due to an invalid format from the AI.");
+    if (error instanceof Error && error.message.includes("'transcription' data")) {
+        throw error;
+    }
+    throw new Error("Failed to process the AI's transcription response due to an invalid format. Please try again.");
   }
 };

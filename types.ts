@@ -4,6 +4,7 @@ export interface AdCreative {
   cta: string;
   variationTitle: string;
   editPlan: EditScene[];
+  sourceFileName?: string; // Added to link back to the source video
 }
 
 export interface EditScene {

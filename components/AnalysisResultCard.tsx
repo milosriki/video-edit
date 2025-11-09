@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { VideoFile, VideoAnalysisResult } from '../types';
-import { EyeIcon, SmileIcon, TagIcon, WandIcon, ScissorsIcon } from './icons';
+import { VideoFile } from '../types';
+import { EyeIcon, SmileIcon, TagIcon, WandIcon, ScissorsIcon, FilmIcon } from './icons';
 
 interface AnalysisResultCardProps {
   videoFile: VideoFile;
@@ -23,8 +23,8 @@ const AnalysisResultCard: React.FC<AnalysisResultCardProps> = ({ videoFile, onGe
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<'scenes' | 'elements' | 'tone'>('scenes');
   
-  const { status, analysisResult, thumbnail, id } = videoFile;
-  const result = analysisResult; // for brevity
+  const { status, analysisResult, thumbnail, id, error } = videoFile;
+  const result = analysisResult;
   
   const isAnalyzed = status === 'analyzed' && result;
   const isTopRanked = isAnalyzed && result.rank === 1;
@@ -43,7 +43,7 @@ const AnalysisResultCard: React.FC<AnalysisResultCardProps> = ({ videoFile, onGe
   };
 
   return (
-    <div className={`rounded-lg border-2 transition-all duration-300 ${isTopRanked ? 'bg-green-900/30 border-green-500' : 'bg-gray-900/50 border-gray-700'} ${!isAnalyzed && 'opacity-60'}`}>
+    <div className={`rounded-lg border-2 transition-all duration-300 ${isTopRanked ? 'bg-green-900/30 border-green-500' : 'bg-gray-900/50 border-gray-700'} ${!isAnalyzed && status !== 'error' && 'opacity-60'}`}>
         <div className="p-4">
             <div className="flex items-start gap-4">
                 {/* Thumbnail & Rank */}
@@ -79,7 +79,12 @@ const AnalysisResultCard: React.FC<AnalysisResultCardProps> = ({ videoFile, onGe
                       </>
                     )}
                     {status === 'processing' && <p className="text-sm text-yellow-300 mt-2">AI is analyzing this video...</p>}
-                    {status === 'error' && <p className="text-sm text-red-300 mt-2">Could not process this video.</p>}
+                    {status === 'error' && (
+                        <div className="mt-2 bg-red-900/40 border-l-4 border-red-600 text-red-300 p-3 rounded-r-md">
+                            <p className="font-semibold text-sm">Processing Failed</p>
+                            <p className="text-xs mt-1">{error}</p>
+                        </div>
+                    )}
                 </div>
             </div>
             
@@ -101,7 +106,7 @@ const AnalysisResultCard: React.FC<AnalysisResultCardProps> = ({ videoFile, onGe
         {/* Expanded Deep Analysis Panel */}
         {isAnalyzed && isExpanded && (
             <div className="bg-gray-900/40 p-4 border-t-2 border-dashed border-gray-700 animate-fade-in">
-                <div className="flex space-x-2 border-b border-gray-700 mb-4">
+                <div className="flex space-x-2 border-b border-gray-700 mb-4 overflow-x-auto pb-2">
                     <TabButton active={activeTab === 'scenes'} onClick={() => setActiveTab('scenes')}>
                         <div className="flex items-center gap-2"><EyeIcon className="w-4 h-4" /> Scene Breakdown</div>
                     </TabButton>
@@ -110,7 +115,7 @@ const AnalysisResultCard: React.FC<AnalysisResultCardProps> = ({ videoFile, onGe
                     </TabButton>
                     <TabButton active={activeTab === 'tone'} onClick={() => setActiveTab('tone')}>
                          <div className="flex items-center gap-2"><SmileIcon className="w-4 h-4" /> Emotional Tone</div>
-                    </Futton>
+                    </TabButton>
                 </div>
 
                 <div className="text-sm max-h-48 overflow-y-auto pr-2">
@@ -131,7 +136,7 @@ const AnalysisResultCard: React.FC<AnalysisResultCardProps> = ({ videoFile, onGe
                     )}
                     {activeTab === 'tone' && (
                          <div className="flex flex-wrap gap-2">
-                            {result.emotionalTone.map((tone, i) => <span keyi} className="bg-purple-800 text-purple-200 px-2 py-1 rounded-full">{tone}</span>)}
+                            {result.emotionalTone.map((tone, i) => <span key={i} className="bg-purple-800 text-purple-200 px-2 py-1 rounded-full">{tone}</span>)}
                         </div>
                     )}
                 </div>

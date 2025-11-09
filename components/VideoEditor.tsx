@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { AdCreative } from '../types';
 import { processVideoWithCreative } from '../services/videoProcessor';
 import { DownloadIcon, FilmIcon, WandIcon } from './icons';
+import { formatErrorMessage } from '../utils/error';
 
 interface VideoEditorProps {
   adCreative: AdCreative;
@@ -48,11 +49,7 @@ const VideoEditor: React.FC<VideoEditorProps> = ({ adCreative, sourceVideo, onCl
       const url = URL.createObjectURL(outputBlob);
       setOutputUrl(url);
     } catch (err) {
-       if (err instanceof Error) {
-        setError(`Processing failed: ${err.message}`);
-      } else {
-        setError('An unknown error occurred during video processing.');
-      }
+       setError(formatErrorMessage(err));
     } finally {
       setIsProcessing(false);
       setProgressMessage('');
@@ -123,7 +120,7 @@ const VideoEditor: React.FC<VideoEditorProps> = ({ adCreative, sourceVideo, onCl
 
           {/* Right Panel: Preview & Logs */}
           <div className="bg-gray-900/50 rounded-lg p-4 flex flex-col justify-center items-center">
-              {error && <p className="text-red-400 text-center">{error}</p>}
+              {error && <p className="text-red-400 text-center p-4 bg-red-900/30 rounded-lg">{error}</p>}
               
               {outputUrl && !error && (
                 <div className="w-full">
