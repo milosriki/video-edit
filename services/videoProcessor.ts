@@ -90,7 +90,6 @@ export const processVideoWithCreative = async (
     await ffmpegInstance.writeFile(inputFileName, videoData);
 
     const sceneFiles: string[] = [];
-    const sceneDurations: number[] = [];
     const totalScenes = adCreative.editPlan.length;
 
     for (let i = 0; i < totalScenes; i++) {
@@ -112,85 +111,70 @@ export const processVideoWithCreative = async (
         if (scene.overlayText && scene.overlayText !== 'N/A') {
             const safeText = scene.overlayText.replace(/'/g, "'\\''").replace(/:/g, '\\:');
             const fontPath = isFontLoaded ? `fontfile=/fonts/Roboto-Regular.ttf:` : '';
-            vf_filters.push(`drawtext=${fontPath}text='${safeText}':fontcolor=white:fontsize=48:box=1:boxcolor=black@0.5:boxborderw=5:x=(w-text_w)/2:y=(h-text_h)*0.9`);
+            vf_filters.push(`drawtext=${fontPath}text='${safeText}':fontcolor=white:fontsize=48:box=1:boxcolor=black@0.5:boxborderw=5:x=(w-text_w)/2:y=(h-text_h)-20`);
         }
 
         const command = [
-            '-i', inputFileName, '-ss', String(start), '-t', String(duration),
-            '-an', // remove audio for visual processing
+            '-ss', `${start}`,
+            '-i', inputFileName,
+            '-t', `${duration}`,
+            '-an', // remove audio from scene clips
         ];
-        
+
         if (vf_filters.length > 0) {
             command.push('-vf', vf_filters.join(','));
         }
         
-        command.push('-y', outputSceneFile);
-
+        command.push(outputSceneFile);
+        
         await ffmpegInstance.exec(command);
         sceneFiles.push(outputSceneFile);
-        sceneDurations.push(duration);
     }
-    
-    onProgress({ progress: 0.7, message: 'Applying transitions...' });
+
+    onProgress({ progress: 0.7, message: 'Combining scenes...' });
 
     if (sceneFiles.length === 1) {
-        const outputData = await ffmpegInstance.readFile(sceneFiles[0]);
-        await ffmpegInstance.deleteFile(inputFileName);
-        await ffmpegInstance.deleteFile(sceneFiles[0]);
-        onProgress({ progress: 1, message: 'Processing complete!' });
-        return new Blob([(outputData as Uint8Array).buffer], { type: 'video/mp4' });
+        await ffmpegInstance.rename(sceneFiles[0], 'combined_video.mp4');
+    } else {
+        const concatList = sceneFiles.map(f => `file '${f}'`).join('\n');
+        await ffmpegInstance.writeFile('concat.txt', concatList);
+
+        await ffmpegInstance.exec([
+            '-f', 'concat',
+            '-safe', '0',
+            '-i', 'concat.txt',
+            '-c', 'copy',
+            'combined_video.mp4'
+        ]);
     }
-
-    const transitionDuration = 0.5;
-    let filterComplex = '';
-    let lastStream = '[0:v]';
-    let currentOffset = sceneDurations[0] - transitionDuration;
-
-    for (let i = 0; i < sceneFiles.length - 1; i++) {
-        const nextStream = `[${i + 1}:v]`;
-        const outputStream = `[v${i+1}]`;
-        filterComplex += `${lastStream}${nextStream}xfade=transition=fade:duration=${transitionDuration}:offset=${currentOffset}${outputStream};`;
-        lastStream = outputStream;
-        if(i + 1 < sceneDurations.length) {
-            currentOffset += sceneDurations[i+1] - transitionDuration;
-        }
-    }
-
-    const concatInputs = sceneFiles.map(f => ['-i', f]).flat();
     
-    await ffmpegInstance.exec([
-        ...concatInputs,
-        '-filter_complex', filterComplex.slice(0, -1),
-        '-map', lastStream, '-y', 'output_no_audio.mp4'
-    ]);
-
     onProgress({ progress: 0.9, message: 'Adding original audio...' });
     
-    // Re-attach the original audio stream to the edited video
     await ffmpegInstance.exec([
-        '-i', 'output_no_audio.mp4',
+        '-i', 'combined_video.mp4',
         '-i', inputFileName,
-        '-c', 'copy', '-map', '0:v:0', '-map', '1:a:0?',
-        '-shortest', '-y', 'output.mp4'
+        '-c:v', 'copy',
+        '-c:a', 'aac',
+        '-map', '0:v:0',
+        '-map', '1:a:0',
+        '-shortest',
+        'final_output.mp4'
     ]);
-
-    onProgress({ progress: 0.95, message: 'Finalizing video...' });
-
-    const outputData = await ffmpegInstance.readFile('output.mp4');
     
+    const outputData = await ffmpegInstance.readFile('final_output.mp4');
+
+    // Cleanup
     await ffmpegInstance.deleteFile(inputFileName);
-    await ffmpegInstance.deleteFile('output_no_audio.mp4');
-    await ffmpegInstance.deleteFile('output.mp4');
-    for (const f of sceneFiles) {
+    for(const f of sceneFiles) {
         await ffmpegInstance.deleteFile(f);
     }
+    if (sceneFiles.length > 1) await ffmpegInstance.deleteFile('concat.txt');
+    await ffmpegInstance.deleteFile('combined_video.mp4');
+    await ffmpegInstance.deleteFile('final_output.mp4');
 
-    onProgress({ progress: 1, message: 'Processing complete!' });
-
-    return new Blob([ (outputData as Uint8Array).buffer ], { type: 'video/mp4' });
+    onProgress({ progress: 1, message: 'Done!' });
+    return new Blob([outputData], { type: 'video/mp4' });
 };
-
-// --- Smart Cutter Functions ---
 
 export const extractAudio = async (
     sourceVideo: File,
@@ -198,76 +182,88 @@ export const extractAudio = async (
 ): Promise<Blob> => {
     const ffmpegInstance = await loadFFmpeg(onLog);
     const videoData = await fileToUint8Array(sourceVideo);
-    await ffmpegInstance.writeFile('input_audio.mp4', videoData);
-
-    await ffmpegInstance.exec(['-i', 'input_audio.mp4', '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', 'output.wav']);
-
-    const audioData = await ffmpegInstance.readFile('output.wav');
-    await ffmpegInstance.deleteFile('input_audio.mp4');
-    await ffmpegInstance.deleteFile('output.wav');
+    const inputFileName = 'input.mp4';
+    const outputFileName = 'output.aac';
+    await ffmpegInstance.writeFile(inputFileName, videoData);
     
-    return new Blob([(audioData as Uint8Array).buffer], { type: 'audio/wav' });
+    await ffmpegInstance.exec(['-i', inputFileName, '-vn', '-acodec', 'copy', outputFileName]);
+    
+    const audioData = await ffmpegInstance.readFile(outputFileName);
+    await ffmpegInstance.deleteFile(inputFileName);
+    await ffmpegInstance.deleteFile(outputFileName);
+    
+    return new Blob([audioData], { type: 'audio/aac' });
 };
 
-export const calculateSilenceSegments = (transcription: TranscribedWord[], silenceThreshold: number, videoDuration: number): { start: number; end: number }[] => {
-    if (transcription.length === 0) return [{ start: 0, end: videoDuration }];
-    
-    const segmentsToKeep = [];
-    let lastWordEnd = 0;
+export const calculateSilenceSegments = (
+  transcription: TranscribedWord[],
+  silenceThreshold: number,
+  videoDuration: number
+): { start: number; end: number }[] => {
+  if (transcription.length === 0) {
+    return [{ start: 0, end: videoDuration }];
+  }
 
-    // Add segment from start to the first word if it's not at the very beginning
-    if (transcription[0].start > 0) {
-        segmentsToKeep.push({ start: 0, end: transcription[0].end });
+  const segments: { start: number; end: number }[] = [];
+  let currentSegmentStart = transcription[0].start;
+
+  for (let i = 0; i < transcription.length - 1; i++) {
+    const currentWord = transcription[i];
+    const nextWord = transcription[i + 1];
+    const silenceDuration = nextWord.start - currentWord.end;
+
+    if (silenceDuration >= silenceThreshold) {
+      segments.push({ start: currentSegmentStart, end: currentWord.end });
+      currentSegmentStart = nextWord.start;
     }
+  }
 
-    for (let i = 0; i < transcription.length - 1; i++) {
-        const currentWord = transcription[i];
-        const nextWord = transcription[i+1];
-        const silenceDuration = nextWord.start - currentWord.end;
+  segments.push({ start: currentSegmentStart, end: transcription[transcription.length - 1].end });
 
-        if (silenceDuration < silenceThreshold) {
-            // Part of the same spoken segment
-            if (segmentsToKeep.length === 0 || lastWordEnd !== currentWord.start) {
-                segmentsToKeep.push({ start: currentWord.start, end: nextWord.end });
-            } else {
-                segmentsToKeep[segmentsToKeep.length - 1].end = nextWord.end;
-            }
-            lastWordEnd = nextWord.end;
-        }
-    }
-    
-    // Add segment from the last word to the end of the video
-    const lastWord = transcription[transcription.length - 1];
-    if (lastWord.end < videoDuration && segmentsToKeep[segmentsToKeep.length-1].end !== videoDuration) {
-         if (segmentsToKeep[segmentsToKeep.length - 1].end === lastWord.start) {
-             segmentsToKeep[segmentsToKeep.length - 1].end = videoDuration;
-         }
-    }
-
-
-    return segmentsToKeep;
+  return segments.filter(s => s.end - s.start > 0.1);
 };
 
+export const calculateKeywordSegments = (
+  transcription: TranscribedWord[],
+  startWord: string,
+  endWord: string
+): { start: number; end: number }[] => {
+  if (!startWord || !endWord || transcription.length === 0) {
+    return [];
+  }
 
-export const calculateKeywordSegments = (transcription: TranscribedWord[], startWord: string, endWord: string): { start: number; end: number }[] => {
-    const segments = [];
-    let startIndex = -1;
+  const lowerStartWord = startWord.toLowerCase();
+  const lowerEndWord = endWord.toLowerCase();
 
-    transcription.forEach((word, i) => {
-        if (word.word.toLowerCase().includes(startWord.toLowerCase()) && startIndex === -1) {
-            startIndex = i;
-        }
-        if (word.word.toLowerCase().includes(endWord.toLowerCase()) && startIndex !== -1) {
-            const segment = {
-                start: transcription[startIndex].start,
-                end: word.end
-            };
-            segments.push(segment);
-            startIndex = -1;
-        }
-    });
+  let startIndex = -1;
+  for (let i = 0; i < transcription.length; i++) {
+    if (transcription[i].word.toLowerCase().includes(lowerStartWord)) {
+      startIndex = i;
+      break;
+    }
+  }
 
-    return segments;
+  if (startIndex === -1) {
+    return [];
+  }
+
+  let lastEndIndex = -1;
+  for (let i = startIndex; i < transcription.length; i++) {
+    if (transcription[i].word.toLowerCase().includes(lowerEndWord)) {
+      lastEndIndex = i;
+    }
+  }
+
+  if (lastEndIndex === -1) {
+    return [];
+  }
+
+  const segmentStart = transcription[startIndex].start;
+  const segmentEnd = transcription[lastEndIndex].end;
+
+  if (segmentEnd <= segmentStart) return [];
+
+  return [{ start: segmentStart, end: segmentEnd }];
 };
 
 export const processVideoBySegments = async (
@@ -281,37 +277,47 @@ export const processVideoBySegments = async (
     onProgress({ progress: 0.1, message: 'FFmpeg loaded. Preparing video...' });
 
     const videoData = await fileToUint8Array(sourceVideo);
-    await ffmpegInstance.writeFile('input_cutter.mp4', videoData);
+    const inputFileName = 'input.mp4';
+    await ffmpegInstance.writeFile(inputFileName, videoData);
 
-    let filterComplex = '';
+    const filterParts = segments.map((seg, i) => {
+        return `[0:v]trim=start=${seg.start}:end=${seg.end},setpts=PTS-STARTPTS[v${i}];` +
+               `[0:a]atrim=start=${seg.start}:end=${seg.end},asetpts=PTS-STARTPTS[a${i}]`;
+    }).join(';');
+    
+    const concatInputs = segments.map((_, i) => `[v${i}][a${i}]`).join('');
+    
+    const filterComplex = `${filterParts};${concatInputs}concat=n=${segments.length}:v=1:a=1[v][a]`;
+    
     const totalDuration = segments.reduce((acc, s) => acc + (s.end - s.start), 0);
-    
-    segments.forEach((seg, i) => {
-        filterComplex += `[0:v]trim=start=${seg.start}:end=${seg.end},setpts=PTS-STARTPTS[v${i}];`;
-        filterComplex += `[0:a]atrim=start=${seg.start}:end=${seg.end},asetpts=PTS-STARTPTS[a${i}];`;
+
+    ffmpegInstance.on('progress', ({ time }: { time: number }) => {
+        const progress = time / totalDuration;
+        if (progress > 0 && progress < 1) {
+             onProgress({ progress: 0.1 + (progress * 0.8), message: `Processing... (${Math.round(progress * 100)}%)` });
+        }
     });
 
-    segments.forEach((_, i) => {
-        filterComplex += `[v${i}][a${i}]`;
-    });
-    
-    filterComplex += `concat=n=${segments.length}:v=1:a=1[v][a]`;
-
-    onProgress({ progress: 0.5, message: 'Cutting and concatenating video...' });
+    onProgress({ progress: 0.1, message: 'Cutting and combining segments...' });
 
     await ffmpegInstance.exec([
-        '-i', 'input_cutter.mp4',
+        '-i', inputFileName,
         '-filter_complex', filterComplex,
-        '-map', '[v]', '-map', '[a]',
-        '-y', 'output_cutter.mp4'
+        '-map', '[v]',
+        '-map', '[a]',
+        'output.mp4'
     ]);
-
-    onProgress({ progress: 0.95, message: 'Finalizing video...' });
-    const outputData = await ffmpegInstance.readFile('output_cutter.mp4');
     
-    await ffmpegInstance.deleteFile('input_cutter.mp4');
-    await ffmpegInstance.deleteFile('output_cutter.mp4');
+    ffmpegInstance.on('progress', () => {}); // Clear progress handler
+    
+    onProgress({ progress: 0.95, message: 'Finalizing video...' });
 
-    onProgress({ progress: 1, message: 'Processing complete!' });
-    return new Blob([(outputData as Uint8Array).buffer], { type: 'video/mp4' });
+    const outputData = await ffmpegInstance.readFile('output.mp4');
+
+    await ffmpegInstance.deleteFile(inputFileName);
+    await ffmpegInstance.deleteFile('output.mp4');
+
+    onProgress({ progress: 1, message: 'Done!' });
+
+    return new Blob([outputData], { type: 'video/mp4' });
 };

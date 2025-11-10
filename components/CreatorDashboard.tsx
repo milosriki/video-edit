@@ -1,12 +1,14 @@
+
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { analyzeAndRankVideos, generateAdCreatives } from '../services/geminiService';
 import { extractFramesFromVideo, generateVideoThumbnail } from '../utils/video';
 import { AdCreative, VideoFile } from '../types';
-import { WandIcon, ClipboardIcon, CheckIcon, UploadIcon, FilmIcon, ScissorsIcon } from './icons';
+import { WandIcon, ClipboardIcon, CheckIcon, UploadIcon, FilmIcon, ScissorsIcon, ShareIcon } from './icons';
 import VideoEditor from './VideoEditor';
 import AnalysisResultCard from './AnalysisResultCard';
 import AudioCutterDashboard from './AudioCutterDashboard';
 import { formatErrorMessage } from '../utils/error';
+import { CreativeToOptimize } from '../App';
 
 // Simple spinner used during async steps
 const Spinner: React.FC<{ text: string }> = ({ text }) => (
@@ -52,6 +54,33 @@ const AdCreativeCard: React.FC<{ adCreative: AdCreative; index: number; onCreate
       console.error('Failed to copy text: ', err);
     }
     document.body.removeChild(ta);
+  };
+
+  const handleExportForFacebook = () => {
+    // In a real implementation, you would:
+    // 1. Check if the video has been rendered for this creative.
+    // 2. If not, you might prompt the user to render it first.
+    // 3. If it is rendered, get the video blob.
+    // 4. Create a text file with the ad copy.
+    // 5. Use a library like JSZip to create a zip file with the video and text file.
+    // 6. Trigger a download of the zip file.
+    
+    const copyContent = `
+Headline:
+${adCreative.headline}
+
+---
+
+Body:
+${adCreative.body}
+
+---
+
+Call to Action:
+${adCreative.cta}
+    `;
+    
+    alert(`Exporting Package for "${adCreative.variationTitle}"\n\nThis would download a .zip file containing:\n1. The rendered video file (e.g., ad_video.mp4)\n2. A text file with the following copy:\n\n${copyContent}`);
   };
 
   const renderCopyButton = (text: string, field: string) => (
@@ -102,17 +131,26 @@ const AdCreativeCard: React.FC<{ adCreative: AdCreative; index: number; onCreate
           ))}
         </div>
       </div>
-      <div className="p-4 bg-gray-800 border-t border-gray-700/50">
-        <button onClick={onCreateVideo} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-all hover:scale-105 transform hover:brightness-110">
+      <div className="p-4 bg-gray-800 border-t border-gray-700/50 flex items-center gap-3">
+        <button onClick={onCreateVideo} className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-all hover:scale-105 transform hover:brightness-110">
           <WandIcon className="w-5 h-5"/>
           Create Video
+        </button>
+        <button onClick={handleExportForFacebook} className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-all">
+          <ShareIcon className="w-5 h-5"/>
+          Export for Facebook
         </button>
       </div>
     </div>
   );
 };
 
-export const CreatorDashboard: React.FC = () => {
+interface CreatorDashboardProps {
+    creativeToOptimize: CreativeToOptimize | null;
+    onOptimizationComplete: () => void;
+}
+
+export const CreatorDashboard: React.FC<CreatorDashboardProps> = ({ creativeToOptimize, onOptimizationComplete }) => {
   const [videoFiles, setVideoFiles] = useState<VideoFile[]>([]);
   const [adCreatives, setAdCreatives] = useState<AdCreative[]>([]);
   const [productInfo, setProductInfo] = useState<string>('A premium online personal training service for busy professionals, focusing on customized workout plans, nutrition coaching, and accountability to achieve significant fitness results.');
@@ -124,40 +162,119 @@ export const CreatorDashboard: React.FC = () => {
   const [selectedCreative, setSelectedCreative] = useState<AdCreative | null>(null);
   const [selectedVideoFile, setSelectedVideoFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  
+  useEffect(() => {
+    if (creativeToOptimize) {
+        const { adCreative, sourceVideoFile } = creativeToOptimize;
+        // Check if the video is already in the workspace, if not, add it.
+        const existingFile = videoFiles.find(vf => vf.id === sourceVideoFile.name);
+        if (!existingFile) {
+            const newVideoFile: VideoFile = {
+                file: sourceVideoFile,
+                id: sourceVideoFile.name,
+                thumbnail: '', // We can generate this if needed, but for now skip for speed
+                status: 'pending' // Or 'analyzed' if we assume it was
+            };
+            setVideoFiles(prev => [...prev, newVideoFile]);
+        }
+        
+        handleOpenEditor(adCreative, sourceVideoFile);
+        onOptimizationComplete(); // Clear the optimization job
+    }
+  }, [creativeToOptimize, onOptimizationComplete, videoFiles]);
 
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
+  const processFiles = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) return;
+    
     setError(null);
+
     const newVideoFiles: VideoFile[] = [];
     for (const file of Array.from(files)) {
-      if (file.type.startsWith('video/')) {
-        if (!videoFiles.some(vf => vf.id === file.name)) {
-          newVideoFiles.push({ file, id: file.name, thumbnail: '', status: 'pending' });
-        }
+      if (file.type.startsWith('video/') && !videoFiles.some(vf => vf.id === file.name)) {
+        newVideoFiles.push({ file, id: file.name, thumbnail: '', status: 'pending' });
       }
     }
+
+    if (newVideoFiles.length === 0) {
+        return;
+    }
+
     setVideoFiles(prev => [...prev, ...newVideoFiles]);
 
-    for (const videoFile of newVideoFiles) {
-      setVideoFiles(prev => prev.map(f => f.id === videoFile.id ? { ...f, status: 'processing' } : f));
-      try {
-        const thumbnail = await generateVideoThumbnail(videoFile.file);
-        setVideoFiles(prev => prev.map(f => f.id === videoFile.id ? { ...f, thumbnail } : f));
-        const frames = await extractFramesFromVideo(videoFile.file, 8);
-        const analysisResults = await analyzeAndRankVideos([{ videoFile: { ...videoFile, thumbnail }, frames }]);
-        if (analysisResults.length > 0) {
-          setVideoFiles(prev => prev.map(f => f.id === videoFile.id ? { ...f, status: 'analyzed', analysisResult: analysisResults[0] } : f));
-        } else {
-          throw new Error('AI analysis returned no result for this video.');
-        }
-      } catch (err) {
-        console.error(`Failed to process ${videoFile.id}:`, err);
+    try {
+        const frameDataPromises = newVideoFiles.map(async (videoFile) => {
+            // Generate thumbnail first for quick UI update
+            const thumbnail = await generateVideoThumbnail(videoFile.file);
+            setVideoFiles(prev => prev.map(f => f.id === videoFile.id ? { ...f, thumbnail, status: 'processing' } : f));
+            
+            // Then extract frames
+            const frames = await extractFramesFromVideo(videoFile.file, 8);
+            return { videoFile: { ...videoFile, thumbnail }, frames };
+        });
+
+        const videoFrameData = await Promise.all(frameDataPromises);
+        
+        setLoadingMessage('AI is analyzing videos...');
+        setIsLoading(true);
+        
+        const analysisResults = await analyzeAndRankVideos(videoFrameData);
+        
+        setVideoFiles(prev => {
+            return prev.map(currentFile => {
+                const result = analysisResults.find(res => res.fileName === currentFile.id);
+                // Only update files that were part of this batch
+                if (newVideoFiles.some(nvf => nvf.id === currentFile.id)) {
+                    if (result) {
+                        return { ...currentFile, status: 'analyzed', analysisResult: result };
+                    }
+                    return { ...currentFile, status: 'error', error: 'AI analysis did not return a result for this video.' };
+                }
+                return currentFile;
+            });
+        });
+
+    } catch (err) {
         const errorMessage = formatErrorMessage(err);
-        setVideoFiles(prev => prev.map(f => f.id === videoFile.id ? { ...f, status: 'error', error: errorMessage } : f));
-      }
+        setError(errorMessage);
+        setVideoFiles(prev => prev.map(f => newVideoFiles.some(nvf => nvf.id === f.id) ? { ...f, status: 'error', error: errorMessage } : f));
+    } finally {
+        setIsLoading(false);
+        setLoadingMessage('');
     }
-    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, [videoFiles]);
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    processFiles(event.target.files);
+    if (event.target) {
+        event.target.value = '';
+    }
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingOver(false);
+    processFiles(event.dataTransfer.files);
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+  
+  const handleDragEnter = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.dataTransfer.items && event.dataTransfer.items.length > 0) {
+      setIsDraggingOver(true);
+    }
+  };
+  
+  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingOver(false);
   };
 
   const handleGenerateVariations = async (videoFile: VideoFile) => {
@@ -230,11 +347,17 @@ export const CreatorDashboard: React.FC = () => {
               Select Videos
             </h2>
             <input type="file" ref={fileInputRef} onChange={handleFileSelect} multiple accept="video/*" className="hidden" />
-            <div className="flex flex-wrap gap-4">
-              <button onClick={() => fileInputRef.current?.click()} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all text-lg transform hover:scale-105 hover:brightness-110">
-                <UploadIcon className="w-6 h-6" />
-                Select from Device
-              </button>
+            <div 
+                onClick={() => fileInputRef.current?.click()}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors duration-300 ${isDraggingOver ? 'border-indigo-500 bg-indigo-900/20' : 'border-gray-600 hover:border-gray-500 hover:bg-gray-800/30'}`}
+              >
+                <UploadIcon className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                <p className="text-lg font-semibold text-gray-300">Drag & drop videos here, or click to browse</p>
+                <p className="text-sm text-gray-500 mt-2">Supports multiple video files</p>
             </div>
           </div>
         </AnimatedSection>
@@ -290,9 +413,7 @@ export const CreatorDashboard: React.FC = () => {
                     onCreateVideo={() => {
                       const sourceFile = videoFiles.find(f => f.id === (ad as any).sourceFileName)?.file;
                       if (sourceFile) {
-                        setSelectedCreative(ad);
-                        setSelectedVideoFile(sourceFile);
-                        setIsEditorOpen(true);
+                        handleOpenEditor(ad, sourceFile);
                       } else {
                         setError(`Could not find the original source video (${(ad as any).sourceFileName}) for this ad creative. Please do not remove videos from the list after generating ads.`);
                       }
@@ -315,5 +436,3 @@ export const CreatorDashboard: React.FC = () => {
     </>
   );
 };
-
-export default CreatorDashboard;

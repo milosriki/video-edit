@@ -1,6 +1,12 @@
+
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BarChartIcon } from './icons';
+import { BarChartIcon, WandIcon, FacebookIcon, DatabaseIcon } from './icons';
+import { getPerformanceInsights } from '../services/geminiService';
+import { AdCreative } from '../types';
+import { formatErrorMessage } from '../utils/error';
+import DateRangePicker from './DateRangePicker';
+import ConnectDataSourceModal from './ConnectDataSourceModal';
 
 const qc = new QueryClient();
 
@@ -18,7 +24,7 @@ type Overview = {
   };
 };
 
-type CreativePerf = {
+export type CreativePerf = {
   creativeId: string;
   name: string;
   platform: string;
@@ -32,6 +38,9 @@ type CreativePerf = {
   cvr: number;
   cpa: number;
   roas: number;
+  // This would ideally come from the DB, but we mock it for now
+  blueprint?: AdCreative;
+  sourceVideoFileName?: string;
 };
 
 type TimeseriesPoint = { ts: number; value: number };
@@ -48,7 +57,7 @@ const number = (n: number) => new Intl.NumberFormat().format(n);
 const money = (n: number) => `$${n.toFixed(2)}`;
 const pct = (n: number) => `${(n * 100).toFixed(2)}%`;
 
-function KpiCard({ label, value, help }: { label: string; value: string; help?: string }) {
+const KpiCard = ({ label, value, help }: { label: string; value: string; help?: string }) => {
   return (
     <div className="bg-gray-800/60 border border-gray-700/60 rounded-lg p-4">
       <div className="text-gray-400 text-xs uppercase tracking-wider">{label}</div>
@@ -56,15 +65,16 @@ function KpiCard({ label, value, help }: { label: string; value: string; help?: 
       {help && <div className="text-xs text-gray-500 mt-1">{help}</div>}
     </div>
   );
-}
+};
 
-function TableHeaderCell({ children }: { children: React.ReactNode }) {
+const TableHeaderCell = ({ children }: { children: React.ReactNode }) => {
   return <th className="px-3 py-2 text-left text-xs font-semibold text-gray-300 bg-gray-800/70">{children}</th>;
-}
+};
 
-function CreativeRow({ c }: { c: CreativePerf }) {
+// FIX: Return a React.Fragment of <td>s instead of a <tr> to avoid nesting <tr> elements.
+const CreativeRow = ({ c }: { c: CreativePerf }) => {
   return (
-    <tr className="border-b border-gray-800/70 hover:bg-gray-800/40">
+    <>
       <td className="px-3 py-2 text-sm font-semibold">{c.name}</td>
       <td className="px-3 py-2 text-sm text-gray-300">{c.platform}</td>
       <td className="px-3 py-2 text-sm text-gray-300">{c.campaign}</td>
@@ -77,11 +87,11 @@ function CreativeRow({ c }: { c: CreativePerf }) {
       <td className="px-3 py-2 text-sm">{pct(c.roas)}</td>
       <td className="px-3 py-2 text-sm">{money(c.spend)}</td>
       <td className="px-3 py-2 text-sm">{money(c.revenue)}</td>
-    </tr>
+    </>
   );
-}
+};
 
-function Chart({ data, label }: { data: TimeseriesPoint[]; label: string }) {
+const Chart = ({ data, label }: { data: TimeseriesPoint[]; label: string }) => {
   const width = 600;
   const height = 140;
   const pad = 12;
@@ -119,14 +129,82 @@ function Chart({ data, label }: { data: TimeseriesPoint[]; label: string }) {
       )}
     </div>
   );
+};
+
+type AIInsightsProps = {
+    creatives: CreativePerf[];
+    onOptimize: (newCreative: AdCreative) => void;
+};
+
+const AIInsights: React.FC<AIInsightsProps> = ({ creatives, onOptimize }) => {
+    const [isLoading, setIsLoading] = useState(false);
+    const [insights, setInsights] = useState<{ topPerformer: string; optimization: string; newBlueprint?: AdCreative } | null>(null);
+    const [error, setError] = useState<string | null>(null);
+
+    const handleAnalyze = async () => {
+        setIsLoading(true);
+        setError(null);
+        setInsights(null);
+        try {
+            const results = await getPerformanceInsights(creatives);
+            setInsights(results);
+        } catch (err) {
+            setError(formatErrorMessage(err));
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <div className="bg-gray-800/60 border border-indigo-500/50 rounded-lg p-6 space-y-4">
+            <div className="flex items-center gap-3">
+                <WandIcon className="w-6 h-6 text-indigo-400" />
+                <h3 className="text-lg font-bold">AI Analyst Insights</h3>
+            </div>
+            {error && <p className="text-red-400 text-sm">{error}</p>}
+            
+            {!insights && (
+                <button onClick={handleAnalyze} disabled={isLoading || creatives.length < 2} className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-all">
+                    {isLoading ? 'Analyzing...' : 'Generate AI Insights'}
+                </button>
+            )}
+
+            {insights && (
+                <div className="space-y-4 text-sm animate-fade-in">
+                    <div>
+                        <h4 className="font-semibold text-green-400">Top Performer Deepdive</h4>
+                        <p className="text-gray-300 whitespace-pre-line">{insights.topPerformer}</p>
+                    </div>
+                    <div>
+                        <h4 className="font-semibold text-yellow-400">Optimization Opportunity</h4>
+                        <p className="text-gray-300 whitespace-pre-line">{insights.optimization}</p>
+                    </div>
+                    {insights.newBlueprint && (
+                         <button onClick={() => onOptimize(insights.newBlueprint!)} className="mt-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-all">
+                            View & Create New Version
+                        </button>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
+interface PerformanceDashboardProps {
+    onOptimizeCreative: (creative: AdCreative, sourceVideoFile: File) => void;
 }
 
-function InnerPerformanceDashboard() {
-  const [days, setDays] = useState<7 | 14 | 30>(7);
+function InnerPerformanceDashboard({ onOptimizeCreative }: PerformanceDashboardProps) {
+  const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
+  const [isDataSourceConnected, setIsDataSourceConnected] = useState(false);
+  const [dateRange, setDateRange] = useState({
+    from: Date.now() - 7 * 24 * 60 * 60 * 1000,
+    to: Date.now(),
+  });
   const [metric, setMetric] = useState<'impressions' | 'clicks' | 'conversions' | 'spend' | 'revenue'>('revenue');
   const [selectedCreative, setSelectedCreative] = useState<string | null>(null);
-  const to = useMemo(() => Date.now(), []);
-  const from = useMemo(() => to - days * 24 * 60 * 60 * 1000, [to, days]);
+  
+  const { from, to } = dateRange;
 
   const overviewQ = useQuery({
     queryKey: ['overview', from, to],
@@ -158,23 +236,61 @@ function InnerPerformanceDashboard() {
       // network hiccups auto-retry
     };
     return () => es.close();
-  }, [selectedCreative]); // eslint-disable-line
+  }, [selectedCreative, overviewQ, creativesQ, tsQ]);
 
   const totals = overviewQ.data?.totals;
+  
+  const handleOptimize = (newCreative: AdCreative) => {
+    alert("In a real app, this would switch to the Creator Dashboard and open the Video Editor with this new AI blueprint. This functionality is wired up in App.tsx, but requires a source video file to be programmatically available.");
+    console.log("New AI-Optimized Blueprint:", newCreative);
+  };
+  
+  const handleConnect = () => {
+      setIsConnectModalOpen(true);
+  }
+  
+  const handleSimulateConnection = () => {
+      setIsDataSourceConnected(true);
+      setIsConnectModalOpen(false);
+  };
 
   return (
     <div className="space-y-6">
+      <ConnectDataSourceModal
+        isOpen={isConnectModalOpen}
+        onClose={() => setIsConnectModalOpen(false)}
+        onSimulateConnect={handleSimulateConnection}
+      />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <BarChartIcon className="w-5 h-5 text-indigo-400" />
           <h2 className="text-xl font-bold">Performance Dashboard</h2>
+           <div className="px-2 py-1 bg-yellow-900/50 text-yellow-300 text-xs font-semibold rounded-md flex items-center gap-1.5">
+             <DatabaseIcon className="w-3 h-3" />
+             Demo Data
+           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setDays(7)} className={`px-3 py-1 rounded text-sm ${days === 7 ? 'bg-indigo-600' : 'bg-gray-700 hover:bg-gray-600'}`}>7d</button>
-          <button onClick={() => setDays(14)} className={`px-3 py-1 rounded text-sm ${days === 14 ? 'bg-indigo-600' : 'bg-gray-700 hover:bg-gray-600'}`}>14d</button>
-          <button onClick={() => setDays(30)} className={`px-3 py-1 rounded text-sm ${days === 30 ? 'bg-indigo-600' : 'bg-gray-700 hover:bg-gray-600'}`}>30d</button>
-        </div>
+        {isDataSourceConnected ? (
+            <div className="bg-green-600 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 text-sm animate-fade-in">
+                <FacebookIcon className="w-5 h-5" />
+                Connected
+            </div>
+        ) : (
+            <button onClick={handleConnect} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm">
+                <FacebookIcon className="w-5 h-5" />
+                Connect Data Source
+            </button>
+        )}
       </div>
+      
+      <DateRangePicker 
+        initialFrom={dateRange.from}
+        initialTo={dateRange.to}
+        onChange={(newFrom, newTo) => setDateRange({ from: newFrom, to: newTo })}
+      />
+      
+      <AIInsights creatives={creativesQ.data || []} onOptimize={handleOptimize} />
+
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
         <KpiCard label="Impressions" value={totals ? number(totals.impressions) : '—'} />
         <KpiCard label="Clicks" value={totals ? number(totals.clicks) : '—'} help={totals ? `CTR ${pct(totals.ctr)}` : undefined}/>
@@ -239,7 +355,7 @@ function InnerPerformanceDashboard() {
             <button onClick={() => setSelectedCreative(null)} className="text-xs text-gray-400 hover:text-white underline">Clear selection</button>
           </div>
           <Chart
-            data={(tsQ.data || []).map(p => ({ ts: p.ts, value: p.value }))}
+            data={(tsQ.data || []).map(p => ({ ts: p.ts, value: Number(p.value) }))}
             label={`Daily ${metric}`}
           />
         </div>
@@ -248,10 +364,10 @@ function InnerPerformanceDashboard() {
   );
 }
 
-export function PerformanceDashboard() {
+export function PerformanceDashboard({ onOptimizeCreative }: PerformanceDashboardProps) {
   return (
     <QueryClientProvider client={qc}>
-      <InnerPerformanceDashboard />
+      <InnerPerformanceDashboard onOptimizeCreative={onOptimizeCreative} />
     </QueryClientProvider>
   );
 }

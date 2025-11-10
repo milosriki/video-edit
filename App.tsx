@@ -1,11 +1,26 @@
 import React, { useState } from 'react';
 import { CreatorDashboard } from './components/CreatorDashboard';
 import { PerformanceDashboard } from './components/PerformanceDashboard';
-import { WandIcon } from './components/icons';
-import { BarChartIcon } from './components/icons';
+import { WandIcon, BarChartIcon } from './components/icons';
+import { AdCreative, VideoFile } from './types';
+
+export type CreativeToOptimize = {
+  adCreative: AdCreative;
+  sourceVideoFile: File;
+};
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'creator' | 'analyst'>('creator');
+  const [creativeToOptimize, setCreativeToOptimize] = useState<CreativeToOptimize | null>(null);
+
+  const handleOptimizeCreative = (creative: AdCreative, sourceVideoFile: File) => {
+    setCreativeToOptimize({ adCreative: creative, sourceVideoFile });
+    setActiveTab('creator');
+  };
+  
+  const handleOptimizationComplete = () => {
+    setCreativeToOptimize(null);
+  }
 
   return (
     <div className="min-h-screen bg-gray-900 text-white font-sans flex flex-col items-center p-4 sm:p-6 lg:p-8">
@@ -37,8 +52,8 @@ export default function App() {
         </div>
 
         <div className="bg-gray-800/50 rounded-2xl shadow-2xl p-6 sm:p-8 backdrop-blur-sm border border-gray-700/50">
-          {activeTab === 'creator' && <CreatorDashboard />}
-          {activeTab === 'analyst' && <PerformanceDashboard />}
+          {activeTab === 'creator' && <CreatorDashboard creativeToOptimize={creativeToOptimize} onOptimizationComplete={handleOptimizationComplete} />}
+          {activeTab === 'analyst' && <PerformanceDashboard onOptimizeCreative={handleOptimizeCreative} />}
         </div>
       </main>
       <footer className="text-center mt-8 text-gray-500 text-sm">

@@ -1,10 +1,13 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AdCreative, TranscribedWord, VideoAnalysisResult, VideoFile } from '../types';
+import { CreativePerf } from "../components/PerformanceDashboard";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const analysisModel = 'gemini-2.5-flash';
 const adGenerationModel = 'gemini-2.5-flash';
+const insightsModel = 'gemini-2.5-pro';
+
 
 type VideoFrameData = {
   videoFile: VideoFile;
@@ -243,4 +246,82 @@ export const transcribeAudio = async (audioBlob: Blob): Promise<TranscribedWord[
     }
     throw new Error("Failed to process the AI's transcription response due to an invalid format. Please try again.");
   }
+};
+
+export const getPerformanceInsights = async (
+    creatives: CreativePerf[]
+): Promise<{ topPerformer: string; optimization: string; newBlueprint?: AdCreative; }> => {
+    if (!process.env.API_KEY) {
+        throw new Error("API key is not configured.");
+    }
+
+    // Sanitize data for the prompt, removing blueprint for brevity
+    const performanceData = creatives.map(({ blueprint, ...rest }) => rest);
+
+    const prompt = `
+You are an expert Meta Ads strategist and data analyst. I have provided you with performance data for a set of video ad creatives.
+
+**Performance Data:**
+${JSON.stringify(performanceData, null, 2)}
+
+**Your Task:**
+1.  **Analyze Top Performer:** Identify the creative with the highest ROAS (Return On Ad Spend). Provide a concise, 1-2 sentence analysis explaining the likely reasons for its success based on its name and campaign type (e.g., "UGC" suggests authenticity, "Prospecting" implies a strong hook is working).
+2.  **Identify Optimization Opportunity:** Identify the creative with the lowest ROAS.
+3.  **Provide Actionable Advice:** Write a 1-2 sentence analysis of why it might be failing.
+4.  **Generate a New Blueprint:** Based on your analysis, create a NEW, optimized "Creative Blueprint" for this underperforming creative. The new blueprint should propose a different angle, headline, or call-to-action to improve performance. The edit plan can be simple, focusing on the first 5 seconds to improve the hook.
+
+**Output Format:**
+Strictly adhere to the JSON schema provided. The 'newBlueprint' must be a complete, valid AdCreative object.
+`;
+
+    const response = await ai.models.generateContent({
+        model: insightsModel,
+        contents: prompt,
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    topPerformerAnalysis: { type: Type.STRING },
+                    underperformerAnalysis: { type: Type.STRING },
+                    newBlueprint: {
+                        type: Type.OBJECT,
+                        properties: {
+                            variationTitle: { type: Type.STRING },
+                            headline: { type: Type.STRING },
+                            body: { type: Type.STRING },
+                            cta: { type: Type.STRING },
+                            editPlan: {
+                                type: Type.ARRAY,
+                                items: {
+                                    type: Type.OBJECT,
+                                    properties: {
+                                        timestamp: { type: Type.STRING },
+                                        visual: { type: Type.STRING },
+                                        edit: { type: Type.STRING },
+                                        overlayText: { type: Type.STRING }
+                                    },
+                                    required: ["timestamp", "visual", "edit", "overlayText"]
+                                }
+                            }
+                        },
+                        required: ["variationTitle", "headline", "body", "cta", "editPlan"]
+                    }
+                },
+                required: ["topPerformerAnalysis", "underperformerAnalysis", "newBlueprint"]
+            }
+        }
+    });
+    
+    try {
+        const jsonResponse = JSON.parse(response.text);
+        return {
+            topPerformer: jsonResponse.topPerformerAnalysis,
+            optimization: jsonResponse.underperformerAnalysis,
+            newBlueprint: jsonResponse.newBlueprint as AdCreative
+        };
+    } catch (error) {
+        console.error("Failed to parse performance insights response:", error, response.text);
+        throw new Error("Failed to process the AI's performance analysis due to an invalid format.");
+    }
 };

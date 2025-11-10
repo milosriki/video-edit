@@ -115,7 +115,7 @@ export const SmileIcon: React.FC<{ className?: string }> = ({ className }) => (
 );
 
 export const ScissorsIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <circle cx="6" cy="6" r="3"></circle>
     <circle cx="6" cy="18" r="3"></circle>
     <line x1="20" y1="4" x2="8.12" y2="15.88"></line>
@@ -171,4 +171,18 @@ export const BarChartIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => 
     <rect x="10.75" y="7" width="2.5" height="10" fill="currentColor" />
     <rect x="15.5" y="4" width="2.5" height="13" fill="currentColor" />
   </svg>
+);
+
+export const ShareIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+    <polyline points="16 6 12 2 8 6"></polyline>
+    <line x1="12" y1="2" x2="12" y2="15"></line>
+  </svg>
+);
+
+export const FacebookIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className={className}>
+        <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878V14.89H8.221v-2.91h2.217v-2.207c0-2.193 1.309-3.414 3.328-3.414.957 0 1.928.171 1.928.171v2.483h-1.25c-1.08 0-1.42.646-1.42 1.365v1.602h2.775l-.443 2.91h-2.332V21.878A10.003 10.003 0 0 0 22 12z"></path>
+    </svg>
 );

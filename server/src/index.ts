@@ -1,7 +1,8 @@
 
 import 'dotenv/config';
-// Fix: Changed import to default express import to allow for namespaced types.
-import express from 'express';
+// Fix: Use aliased imports for express Request and Response types
+// to resolve type conflicts with global DOM types.
+import express, { Request as ExpressRequest, Response as ExpressResponse } from 'express';
 import cors from 'cors';
 import Database from 'better-sqlite3';
 import path from 'node:path';
@@ -75,16 +76,13 @@ if (creativeCount.c === 0) {
 }
 
 // SSE clients
-// Fix: Use namespaced express.Response type.
-type SSEClient = { id: number; res: express.Response };
+type SSEClient = { id: number; res: ExpressResponse };
 let clients: SSEClient[] = [];
 let nextClientId = 1;
 
-// Fix: Use namespaced express types for request and response.
-app.get('/api/health', (_req: express.Request, res: express.Response) => res.json({ ok: true }));
+app.get('/api/health', (_req: ExpressRequest, res: ExpressResponse) => res.json({ ok: true }));
 
-// Fix: Use namespaced express types for request and response.
-app.get('/api/overview', (req: express.Request, res: express.Response) => {
+app.get('/api/overview', (req: ExpressRequest, res: ExpressResponse) => {
   const from = Number(req.query.from || 0);
   const to = Number(req.query.to || Date.now());
   const row = db.prepare(`
@@ -112,8 +110,7 @@ app.get('/api/overview', (req: express.Request, res: express.Response) => {
   res.json({ totals: { impressions, clicks, conversions, spend, revenue, ctr, cvr, cpa, roas } });
 });
 
-// Fix: Use namespaced express types for request and response.
-app.get('/api/creatives', (req: express.Request, res: express.Response) => {
+app.get('/api/creatives', (req: ExpressRequest, res: ExpressResponse) => {
   const from = Number(req.query.from || 0);
   const to = Number(req.query.to || Date.now());
   const sort = String(req.query.sort || 'roas');
@@ -150,8 +147,7 @@ app.get('/api/creatives', (req: express.Request, res: express.Response) => {
   res.json(withDerived.slice(0, limit));
 });
 
-// Fix: Use namespaced express types for request and response.
-app.get('/api/timeseries', (req: express.Request, res: express.Response) => {
+app.get('/api/timeseries', (req: ExpressRequest, res: ExpressResponse) => {
   const creativeId = String(req.query.creativeId || '');
   const metric = String(req.query.metric || 'revenue');
   const from = Number(req.query.from || 0);
@@ -172,8 +168,7 @@ app.get('/api/timeseries', (req: express.Request, res: express.Response) => {
   res.json(rows.map(r => ({ ts: Number(r.dayTs), value: Number(r.value) })));
 });
 
-// Fix: Use namespaced express types for request and response.
-app.post('/api/events', (req: express.Request, res: express.Response) => {
+app.post('/api/events', (req: ExpressRequest, res: ExpressResponse) => {
   const events = Array.isArray(req.body) ? req.body : [req.body];
   const insert = db.prepare(`
     INSERT INTO metrics (creative_id, ts, impressions, clicks, conversions, spend, revenue)
@@ -201,8 +196,7 @@ app.post('/api/events', (req: express.Request, res: express.Response) => {
   res.json({ ok: true, ingested: events.length });
 });
 
-// Fix: Use namespaced express types for request and response.
-app.get('/api/stream', (req: express.Request, res: express.Response) => {
+app.get('/api/stream', (req: ExpressRequest, res: ExpressResponse) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
