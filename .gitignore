@@ -19,6 +19,10 @@ firebase-debug.log*
 firebase-debug.*.log
 functions/dist
 
+# Compiled TypeScript files
+*.js
+!functions/dist/**/*.js
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
