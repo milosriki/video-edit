@@ -3,10 +3,10 @@ import * as avatars from '../ai/knowledge/avatars.json' with { type: 'json' };
 import * as copyDB from '../ai/knowledge/copyDatabase.json' with { type: 'json' };
 
 // Re-exporting types for use in the main server file.
-export type { CampaignBrief } from '../../../../types.js';
-export type { CampaignStrategy } from '../../../../types.js';
-export type { AdCreative } from '../../../../types.js';
-export type { CreativeRanking } from '../../../../types.js';
+export type { CampaignBrief } from '../../../types';
+export type { CampaignStrategy } from '../../../types';
+export type { AdCreative } from '../../../types';
+export type { CreativeRanking } from '../../../types';
 
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
@@ -38,7 +38,7 @@ export function getAvatars() {
 }
 
 /** Analyze a set of user videos and produce a strategy */
-export async function analyzeVideoContent(allVideoData: any[]): Promise<import('../../../../types.js').CampaignStrategy> {
+export async function analyzeVideoContent(allVideoData: any[]): Promise<import('../../../types').CampaignStrategy> {
     const systemPrompt = `You are an expert AI video intelligence analyst... [Your full analysis prompt here]`;
     
     const filePrompts = allVideoData.map(({ videoFile, frames, transcription }) => {
@@ -80,10 +80,10 @@ export async function analyzeVideoContent(allVideoData: any[]): Promise<import('
 
 /** Generate 10 ad creative blueprints with strict schema */
 export async function generateAdCreatives(
-    brief: import('../../../../types.js').CampaignBrief,
+    brief: import('../../../types').CampaignBrief,
     avatarKey: string,
-    strategy: import('../../../../types.js').CampaignStrategy
-): Promise<import('../../../../types.js').AdCreative[]> {
+    strategy: import('../../../types').CampaignStrategy
+): Promise<import('../../../types').AdCreative[]> {
     const avatar = (avatars as any).default[avatarKey];
     const relevantHeadlines = (copyDB as any).default.headlines[avatarKey as keyof typeof (copyDB as any).default.headlines];
 
@@ -164,10 +164,10 @@ Generate 10 distinct, high-converting direct-response video ad blueprints based 
 
 /** Rank creatives by predicted ROI and return scores */
 export async function rankCreatives(
-    brief: import('../../../../types.js').CampaignBrief,
+    brief: import('../../../types').CampaignBrief,
     avatarKey: string,
-    creatives: import('../../../../types.js').AdCreative[]
-): Promise<import('../../../../types.js').CreativeRanking[]> {
+    creatives: import('../../../types').AdCreative[]
+): Promise<import('../../../types').CreativeRanking[]> {
     const avatar = (avatars as any).default[avatarKey];
 
     const creativesString = creatives.map((c, i) => `
