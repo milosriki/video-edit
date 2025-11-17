@@ -1,4 +1,3 @@
-import * as functions from "firebase-functions";
 import { GoogleGenAI, Type } from '@google/genai';
 import * as avatars from '../ai/knowledge/avatars.json' with { type: 'json' };
 import * as copyDB from '../ai/knowledge/copyDatabase.json' with { type: 'json' };
@@ -9,22 +8,20 @@ export type { CampaignStrategy } from '../types.js';
 export type { AdCreative } from '../types.js';
 export type { CreativeRanking } from '../types.js';
 
-// FIX: Get API key from environment variable (preferred in Firebase Functions v2)
-// If functions.config() is needed, ensure it's properly configured in Firebase
-const getApiKey = (): string => {
-  const envKey = process.env.GEMINI_API_KEY;
-  if (envKey) return envKey;
+// Lazy initialization to avoid module-load-time errors
+let aiInstance: GoogleGenAI | null = null;
 
-  // Fallback to functions.config() if available (type assertion needed for older API)
-  try {
-    const config = (functions as any).config?.();
-    return config?.gemini?.api_key || '';
-  } catch {
-    return '';
+function getAI(): GoogleGenAI {
+  if (!aiInstance) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error('GEMINI_API_KEY environment variable is not set. Please configure it in your Firebase Functions environment.');
+    }
+    aiInstance = new GoogleGenAI({ apiKey });
   }
-};
+  return aiInstance;
+}
 
-const ai = new GoogleGenAI({ apiKey: getApiKey() });
 const analysisModel = 'gemini-2.5-pro';
 const adGenerationModel = 'gemini-2.5-flash';
 
@@ -69,7 +66,7 @@ export async function analyzeVideoContent(allVideoData: any[]): Promise<import('
         return [...imageParts, ...textParts];
       }).flat();
 
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
         model: analysisModel,
         contents: [{ parts: [...filePrompts, { text: systemPrompt }] }],
         config: {
@@ -130,7 +127,7 @@ Generate 10 distinct, high-converting direct-response video ad blueprints based 
 5.  **Be Specific:** The 'visual' and 'edit' descriptions in the edit plan should be concise and actionable for a video editor.
 6.  **Overlay Text:** Create compelling, short overlay text. Use 'N/A' if no text is needed for a scene.`;
 
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
         model: adGenerationModel,
         contents: [{ parts: [{ text: masterPrompt }] }],
         config: {
@@ -202,7 +199,7 @@ ${creativesString}
 3.  **Provide Justification:** For each creative, provide a concise reason for its roiScore.
 4.  **Output JSON:** Your final output must be a valid JSON array, strictly adhering to the provided schema, containing an object for each creative. The 'index' must match the creative number from the input. Do not include markdown or any other text.`;
 
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
         model: adGenerationModel, // Using flash for speed
         contents: [{ parts: [{ text: prompt }] }],
         config: {
