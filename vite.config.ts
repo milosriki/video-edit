@@ -9,14 +9,20 @@ const __dirname = path.dirname(__filename);
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
+  
+  // IMPORTANT: REPLACE THIS WITH YOUR FIREBASE PROJECT ID
+  const firebaseProjectId = 'ptd-fitness-demo';
+  
   return {
     server: {
       port: 3000,
       host: '0.0.0.0',
       proxy: {
+        // This now points to the Firebase Functions emulator
         '/api': {
-          target: 'http://localhost:4000',
-          changeOrigin: true
+          target: `http://127.0.0.1:5001/${firebaseProjectId}/us-central1/api`,
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api/, ''),
         }
       }
     },

@@ -47,24 +47,23 @@ export interface VideoAnalysisResult {
     sceneDescriptions: Array<{ timestamp: string; description: string; }>;
     keyObjects: string[];
     emotionalTone: string[];
-    hooks: string[];
-    angles: string[];
-    risks: string[];
-    sentiments: string[];
-    keyMoments?: Array<{ t: number; note: string }>;
     veoHookSuggestion?: string;
     audioAnalysis?: AudioAnalysisResult;
+    hooks?: string[];
+    angles?: string[];
+    risks?: string[];
+    sentiments?: string[];
+    keyMoments?: Array<{ t: number; note: string }>;
 }
 
 export interface CampaignStrategy {
-    summary: string;
-    keyAngles: string[];
-    risksToAvoid: string[];
+    primaryVideoFileName: string;
+    bRollFileNames: string[];
+    strategyJustification: string;
     videoAnalyses: VideoAnalysisResult[];
-    // FIX: Add missing properties used in AdWorkflow.tsx
-    primaryVideoFileName?: string;
-    bRollFileNames?: string[];
-    strategyJustification?: string;
+    summary?: string;
+    keyAngles?: string[];
+    risksToAvoid?: string[];
 }
 
 export interface TranscribedWord {
@@ -87,7 +86,6 @@ export interface ChatMessage {
   parts: { text: string }[];
 }
 
-// FIX: Update CampaignBrief to include all properties used in the form in AdWorkflow.tsx. This avoids a large rewrite of the form component.
 export interface CampaignBrief {
     productName: string;
     offer: string;
@@ -95,24 +93,21 @@ export interface CampaignBrief {
     angle: string;
     cta: string;
     tone: 'direct'|'empathetic'|'authoritative'|'playful'|'inspirational';
-    goals?: string[];
     platform: 'reels'|'shorts'|'tiktok'|'feed'|'stories';
-    complianceRules?: string[];
-
-    // These properties are from the old definition, kept for compatibility.
-    // In a real refactor, these would be removed and the form updated.
     serviceName?: string;
     idealClient?: string;
     coreBenefits?: string;
     uniqueSellingPoint?: string;
     painPoints?: string;
     emotionalResponse?: string;
+    goals?: string[];
+    complianceRules?: string[];
 }
 
 export interface Avatar {
     key: string;
     name: string;
-    description: string; // Kept for server/UI compatibility
+    description?: string;
     pain_points?: string;
     desires?: string;
 }
