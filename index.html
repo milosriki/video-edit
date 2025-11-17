@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-g" />
+    <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI Video Command Center</title>
     <!-- Tailwind CSS -->
@@ -9,6 +9,11 @@
     
     <!-- FFmpeg (for in-browser video editing) -->
     <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js" async defer></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     
     <script type="importmap">
 {
@@ -20,16 +25,19 @@
     "@tanstack/react-query": "https://aistudiocdn.com/@tanstack/react-query@^5.90.7",
     "path": "https://aistudiocdn.com/path@^0.12.7",
     "vite": "https://aistudiocdn.com/vite@^7.2.2",
-    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.0",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
+    "url": "https://aistudiocdn.com/url@^0.11.4",
     "dotenv/": "https://aistudiocdn.com/dotenv@^17.2.3/",
     "express": "https://aistudiocdn.com/express@^5.1.0",
     "cors": "https://aistudiocdn.com/cors@^2.8.5",
-    "better-sqlite3": "https://aistudiocdn.com/better-sqlite3@^12.4.1",
-    "url": "https://aistudiocdn.com/url@^0.11.4"
+    "better-sqlite3": "https://aistudiocdn.com/better-sqlite3@^12.4.1"
   }
 }
 </script>
     <style>
+      body {
+        font-family: 'Inter', sans-serif;
+      }
       /* Simple animation for expanded analysis card */
       @keyframes fade-in {
         from { opacity: 0; transform: translateY(-10px); }

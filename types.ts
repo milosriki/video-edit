@@ -1,41 +1,132 @@
+
 export interface AdCreative {
+  primarySourceFileName: string;
+  variationTitle: string;
   headline: string;
   body: string;
   cta: string;
-  variationTitle: string;
   editPlan: EditScene[];
-  sourceFileName?: string; // Added to link back to the source video
+  ranking?: CreativeRanking; // For holding ranked data on the client
+  // FIX: Add properties for ranked data used by AdCreativeCard
+  __roiScore?: number | null;
+  __hookScore?: number | null;
+  __ctaScore?: number | null;
+  __reasons?: string;
 }
 
 export interface EditScene {
   timestamp: string;
   visual: string;
   edit: string;
-  overlayText: string;
+  overlayText?: string;
+  sourceFile?: string;
 }
 
 export interface VideoFile {
     file: File;
-    id: string; // using file.name for simplicity as a key
+    id: string;
     thumbnail: string;
     status: 'pending' | 'processing' | 'analyzed' | 'error';
     analysisResult?: VideoAnalysisResult;
     error?: string;
+    progress?: number; // For per-file progress tracking
+    loadingMessage?: string; // For per-file status messages
+}
+
+export interface AudioAnalysisResult {
+  summary: string;
+  keyPhrases: string[];
+  callsToAction: string[];
 }
 
 export interface VideoAnalysisResult {
-    rank: number; // Note: Rank will be assigned after all are processed.
     fileName: string;
+    rank: number;
     justification: string;
     summary: string;
-    // Deep Analysis Fields
-    sceneDescriptions: { timestamp: string; description: string; }[];
+    sceneDescriptions: Array<{ timestamp: string; description: string; }>;
     keyObjects: string[];
     emotionalTone: string[];
+    hooks: string[];
+    angles: string[];
+    risks: string[];
+    sentiments: string[];
+    keyMoments?: Array<{ t: number; note: string }>;
+    veoHookSuggestion?: string;
+    audioAnalysis?: AudioAnalysisResult;
+}
+
+export interface CampaignStrategy {
+    summary: string;
+    keyAngles: string[];
+    risksToAvoid: string[];
+    videoAnalyses: VideoAnalysisResult[];
+    // FIX: Add missing properties used in AdWorkflow.tsx
+    primaryVideoFileName?: string;
+    bRollFileNames?: string[];
+    strategyJustification?: string;
 }
 
 export interface TranscribedWord {
   word: string;
   start: number;
   end: number;
+}
+
+export type AdvancedEdit = { id: string } & (
+  | { type: 'trim'; start: string; end: string }
+  | { type: 'text'; text: string; start: string; end: string; position: 'top' | 'center' | 'bottom'; fontSize: number; }
+  | { type: 'image'; file: File; position: 'top_left' | 'top_right' | 'bottom_left' | 'bottom_right'; scale: number; opacity: number; }
+  | { type: 'speed'; factor: number }
+  | { type: 'filter'; name: 'grayscale' | 'sepia' | 'negate' | 'vignette' }
+  | { type: 'mute' }
+);
+
+export interface ChatMessage {
+  role: 'user' | 'model';
+  parts: { text: string }[];
+}
+
+// FIX: Update CampaignBrief to include all properties used in the form in AdWorkflow.tsx. This avoids a large rewrite of the form component.
+export interface CampaignBrief {
+    productName: string;
+    offer: string;
+    targetMarket: string;
+    angle: string;
+    cta: string;
+    tone: 'direct'|'empathetic'|'authoritative'|'playful'|'inspirational';
+    goals?: string[];
+    platform: 'reels'|'shorts'|'tiktok'|'feed'|'stories';
+    complianceRules?: string[];
+
+    // These properties are from the old definition, kept for compatibility.
+    // In a real refactor, these would be removed and the form updated.
+    serviceName?: string;
+    idealClient?: string;
+    coreBenefits?: string;
+    uniqueSellingPoint?: string;
+    painPoints?: string;
+    emotionalResponse?: string;
+}
+
+export interface Avatar {
+    key: string;
+    name: string;
+    description: string; // Kept for server/UI compatibility
+    pain_points?: string;
+    desires?: string;
+}
+
+export interface CreativeRanking {
+  index: number;
+  roiScore: number;
+  reasons: string;
+  hookScore?: number;
+  ctaScore?: number;
+}
+
+export interface StoryboardPanel {
+  description: string;
+  image_prompt: string;
+  imageUrl?: string;
 }

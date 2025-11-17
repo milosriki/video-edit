@@ -1,209 +1,29 @@
-import { GoogleGenAI, Type } from "@google/genai";
-import { AdCreative, TranscribedWord, VideoAnalysisResult, VideoFile } from '../types';
-import { CreativePerf } from "../components/PerformanceDashboard";
+import { GoogleGenAI, Type, Chat, Modality } from "@google/genai";
+import { TranscribedWord } from '../types';
+import { fileToBase64 } from "../utils/files";
+
+// This file now handles ONLY direct-to-Gemini calls for the standalone tools.
+// The core workflow is now managed by `apiClient.ts`.
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-const analysisModel = 'gemini-2.5-flash';
-const adGenerationModel = 'gemini-2.5-flash';
-const insightsModel = 'gemini-2.5-pro';
-
-
-type VideoFrameData = {
-  videoFile: VideoFile;
-  frames: string[];
-}
-
-export const analyzeAndRankVideos = async (videoFrameData: VideoFrameData[]): Promise<VideoAnalysisResult[]> => {
-  if (!process.env.API_KEY) {
-    throw new Error("API key is not configured.");
-  }
-
-  const filePrompts = videoFrameData.map(({ videoFile, frames }) => {
-    const imageParts = frames.map(frame => ({
-      inlineData: { mimeType: 'image/jpeg', data: frame },
-    }));
-    return [...imageParts, { text: `---VIDEO_NAME:${videoFile.file.name}---` }];
-  }).flat();
-  
-  const prompt = `You are an expert AI video intelligence analyst, specializing in Meta ads for the personal training industry. I have provided frames from several videos.
-  
-  Your task is to perform a deep analysis of each video and rank them from best to worst based on their potential to be a successful direct-response ad.
-
-  For each video, provide:
-  1.  **Ranking and Justification:** A rank and a clear reason for it, considering factors like visual clarity, hook potential, emotional appeal, and clear depiction of fitness activities.
-  2.  **Summary:** A concise summary of the video's content.
-  3.  **Scene Breakdown:** A timestamped list of the key visual scenes or shots.
-  4.  **Key Elements:** A list of key objects or actions depicted (e.g., 'kettlebell swing', 'running on treadmill').
-  5.  **Emotional Tone:** A list of the dominant emotions conveyed (e.g., 'motivational', 'intense', 'positive').
-
-  Strictly adhere to the JSON schema provided.
-  `;
-  
-  const response = await ai.models.generateContent({
-    model: analysisModel,
-    contents: { parts: [...filePrompts, { text: prompt }] },
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            rank: { type: Type.INTEGER },
-            fileName: { type: Type.STRING },
-            summary: { type: Type.STRING },
-            justification: { type: Type.STRING },
-            sceneDescriptions: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  timestamp: { type: Type.STRING },
-                  description: { type: Type.STRING },
-                },
-                required: ["timestamp", "description"],
-              },
-            },
-            keyObjects: { type: Type.ARRAY, items: { type: Type.STRING } },
-            emotionalTone: { type: Type.ARRAY, items: { type: Type.STRING } },
-          },
-          required: ["rank", "fileName", "summary", "justification", "sceneDescriptions", "keyObjects", "emotionalTone"],
-        },
-      },
-    },
-  });
-
-  try {
-    const jsonResponse = JSON.parse(response.text);
-    return jsonResponse as VideoAnalysisResult[];
-  } catch (error) {
-    console.error("Failed to parse ranking response:", error, response.text);
-    throw new Error("Failed to process the AI's analysis response due to an invalid format. Please try again.");
-  }
-};
-
-
-export const generateAdCreatives = async (
-  analysisResult: VideoAnalysisResult,
-  productInfo: string
-): Promise<AdCreative[]> => {
-  if (!process.env.API_KEY) {
-    throw new Error("API key is not configured.");
-  }
-
-  const prompt = `
-You are an elite AI Video Editor and Meta Ads Strategist for the personal training industry. Your task is to create a complete "Creative Blueprint" for 10 high-converting video ads based on the provided deep video analysis. This blueprint must include both the ad copy and a detailed, second-by-second editing plan. You MUST adhere to the "Mastery 2025" framework.
-
----
-**Mastery 2025 Framework Rules:**
-1.  **Creative Architecture (4-Phase Framework):** Structure every ad with a Pattern Interrupt, Value Prop, Validation, and Action Driver.
-2.  **Psychological Triggers:** Stack a Primary Driver (Fear, Curiosity, etc.) with Secondary Reinforcers (Scarcity, Social Proof, etc.).
-3.  **Hook Multiplication (PASTOR Formula):** Generate diverse hooks based on Problem, Amplify, Solution, Testimonial, Offer, Response.
-4.  **Industry-Specific Tactics:** Focus on transformation, authority, and client pain points.
-
----
-
-**Deep Analysis of Winning Video (${analysisResult.fileName}):**
-*   **Summary:** ${analysisResult.summary}
-*   **Justification:** ${analysisResult.justification}
-*   **Scene Breakdown:** ${analysisResult.sceneDescriptions.map(s => `(${s.timestamp}) ${s.description}`).join(', ')}
-*   **Key Elements:** ${analysisResult.keyObjects.join(', ')}
-*   **Emotional Tone:** ${analysisResult.emotionalTone.join(', ')}
-
-**Product Information:**
-${productInfo}
-
----
-
-**YOUR TASK:**
-For each of the 10 ad variations, provide:
-1.  A compelling title for the variation (e.g., "The 'Fear of Missing Out' Angle").
-2.  The ad copy (headline, body, cta).
-3.  A detailed, timestamped **Edit Plan** that tells a human editor exactly how to cut the video. It should describe the visual from the source video, the specific edit to make (e.g., "Quick zoom," "Text overlay"), and any text to show on screen.
-
-**Output Format:**
-Strictly adhere to the JSON schema provided.
-`;
-
-  const response = await ai.models.generateContent({
-    model: adGenerationModel,
-    contents: prompt,
-    config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-                ads: {
-                    type: Type.ARRAY,
-                    description: "An array of up to 10 unique ad creative blueprints.",
-                    items: {
-                        type: Type.OBJECT,
-                        properties: {
-                            variationTitle: { type: Type.STRING, description: "A descriptive title for the ad angle (e.g., 'Social Proof Angle')." },
-                            headline: { type: Type.STRING, description: "The Pattern Interrupt hook. A short, attention-grabbing headline." },
-                            body: { type: Type.STRING, description: "The Value Prop & Validation. Persuasive body copy (2-4 sentences)." },
-                            cta: { type: Type.STRING, description: "The Action Driver. A clear and urgent call to action." },
-                            editPlan: {
-                                type: Type.ARRAY,
-                                description: "A step-by-step editing plan for the video.",
-                                items: {
-                                    type: Type.OBJECT,
-                                    properties: {
-                                        timestamp: { type: Type.STRING, description: "Time range for the scene (e.g., '0s-2s')." },
-                                        visual: { type: Type.STRING, description: "Description of the visual content in this scene." },
-                                        edit: { type: Type.STRING, description: "Specific editing action to take (e.g., 'Add text overlay', 'Quick zoom')." },
-                                        overlayText: { type: Type.STRING, description: "Text to display on screen. Use 'N/A' if none." }
-                                    },
-                                    required: ["timestamp", "visual", "edit", "overlayText"]
-                                }
-                            }
-                        },
-                        required: ["variationTitle", "headline", "body", "cta", "editPlan"]
-                    }
-                }
-            },
-            required: ["ads"]
-        }
-    }
-  });
-
-  try {
-    const jsonResponse = JSON.parse(response.text);
-    if(jsonResponse.ads && Array.isArray(jsonResponse.ads)) {
-        return jsonResponse.ads as AdCreative[];
-    }
-    throw new Error("The AI's ad creative response was missing the expected 'ads' data.");
-  } catch (error) {
-    console.error("Failed to parse ad variations response:", error, response.text);
-    if (error instanceof Error && error.message.includes("'ads' data")) {
-        throw error;
-    }
-    throw new Error("Failed to process the AI's ad creative response due to an invalid format. Please try again.");
-  }
-};
+const fastModel = 'gemini-2.5-flash';
+const chatModel = 'gemini-2.5-flash';
+const imageGenModel = 'imagen-4.0-generate-001';
+const imageEditModel = 'gemini-2.5-flash-image';
+const ttsModel = 'gemini-2.5-flash-preview-tts';
+const liveModel = 'gemini-2.5-flash-native-audio-preview-09-2025';
+const veoModel = 'veo-3.1-fast-generate-preview';
+const proModel = 'gemini-2.5-pro';
 
 export const transcribeAudio = async (audioBlob: Blob): Promise<TranscribedWord[]> => {
-  if (!process.env.API_KEY) {
-    throw new Error("API key is not configured.");
-  }
-
-  const reader = new FileReader();
-  const base64AudioPromise = new Promise<string>((resolve, reject) => {
-    reader.onloadend = () => {
-      const base64data = (reader.result as string).split(',')[1];
-      resolve(base64data);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(audioBlob);
-  });
-  
-  const audioData = await base64AudioPromise;
+  if (!process.env.API_KEY) throw new Error("API key is not configured.");
+  const audioData = await fileToBase64(audioBlob);
 
   const prompt = `Transcribe the following audio file. Provide a word-by-word transcription with precise start and end timestamps for each word.`;
   
   const response = await ai.models.generateContent({
-    model: analysisModel, // or a model fine-tuned for transcription if available
+    model: fastModel,
     contents: {
       parts: [
         { inlineData: { mimeType: audioBlob.type, data: audioData } },
@@ -233,95 +53,115 @@ export const transcribeAudio = async (audioBlob: Blob): Promise<TranscribedWord[
     },
   });
 
-  try {
-    const jsonResponse = JSON.parse(response.text);
-    if (jsonResponse.transcription && Array.isArray(jsonResponse.transcription)) {
-      return jsonResponse.transcription as TranscribedWord[];
-    }
-    throw new Error("The AI's transcription response was missing the expected 'transcription' data.");
-  } catch (error) {
-    console.error("Failed to parse transcription response:", error, response.text);
-    if (error instanceof Error && error.message.includes("'transcription' data")) {
-        throw error;
-    }
-    throw new Error("Failed to process the AI's transcription response due to an invalid format. Please try again.");
+  const jsonResponse = JSON.parse(response.text);
+  if (jsonResponse.transcription && Array.isArray(jsonResponse.transcription)) {
+    return jsonResponse.transcription as TranscribedWord[];
   }
+  throw new Error("The AI's transcription response was missing the expected 'transcription' data.");
 };
 
-export const getPerformanceInsights = async (
-    creatives: CreativePerf[]
-): Promise<{ topPerformer: string; optimization: string; newBlueprint?: AdCreative; }> => {
-    if (!process.env.API_KEY) {
-        throw new Error("API key is not configured.");
-    }
+export const generateStoryboard = async (prompt: string): Promise<{ description: string; image_prompt: string; }[]> => {
+  const systemInstruction = `You are a creative director specializing in short-form video ads. Your task is to break down an ad concept into a 6-panel storyboard. For each panel, provide a concise visual description and a detailed, vibrant prompt suitable for an AI image generator like Imagen. The image prompt should be descriptive, including style, lighting, and composition details. The response must be a valid JSON array of 6 objects.`;
 
-    // Sanitize data for the prompt, removing blueprint for brevity
-    const performanceData = creatives.map(({ blueprint, ...rest }) => rest);
-
-    const prompt = `
-You are an expert Meta Ads strategist and data analyst. I have provided you with performance data for a set of video ad creatives.
-
-**Performance Data:**
-${JSON.stringify(performanceData, null, 2)}
-
-**Your Task:**
-1.  **Analyze Top Performer:** Identify the creative with the highest ROAS (Return On Ad Spend). Provide a concise, 1-2 sentence analysis explaining the likely reasons for its success based on its name and campaign type (e.g., "UGC" suggests authenticity, "Prospecting" implies a strong hook is working).
-2.  **Identify Optimization Opportunity:** Identify the creative with the lowest ROAS.
-3.  **Provide Actionable Advice:** Write a 1-2 sentence analysis of why it might be failing.
-4.  **Generate a New Blueprint:** Based on your analysis, create a NEW, optimized "Creative Blueprint" for this underperforming creative. The new blueprint should propose a different angle, headline, or call-to-action to improve performance. The edit plan can be simple, focusing on the first 5 seconds to improve the hook.
-
-**Output Format:**
-Strictly adhere to the JSON schema provided. The 'newBlueprint' must be a complete, valid AdCreative object.
-`;
-
-    const response = await ai.models.generateContent({
-        model: insightsModel,
-        contents: prompt,
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                    topPerformerAnalysis: { type: Type.STRING },
-                    underperformerAnalysis: { type: Type.STRING },
-                    newBlueprint: {
-                        type: Type.OBJECT,
-                        properties: {
-                            variationTitle: { type: Type.STRING },
-                            headline: { type: Type.STRING },
-                            body: { type: Type.STRING },
-                            cta: { type: Type.STRING },
-                            editPlan: {
-                                type: Type.ARRAY,
-                                items: {
-                                    type: Type.OBJECT,
-                                    properties: {
-                                        timestamp: { type: Type.STRING },
-                                        visual: { type: Type.STRING },
-                                        edit: { type: Type.STRING },
-                                        overlayText: { type: Type.STRING }
-                                    },
-                                    required: ["timestamp", "visual", "edit", "overlayText"]
-                                }
-                            }
-                        },
-                        required: ["variationTitle", "headline", "body", "cta", "editPlan"]
-                    }
-                },
-                required: ["topPerformerAnalysis", "underperformerAnalysis", "newBlueprint"]
+  const response = await ai.models.generateContent({
+    model: proModel,
+    contents: { parts: [{ text: `Ad Concept: "${prompt}"` }] },
+    config: {
+      systemInstruction,
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            description: {
+              type: Type.STRING,
+              description: "A concise description of the visual for this panel."
+            },
+            image_prompt: {
+              type: Type.STRING,
+              description: "A detailed, vibrant prompt for an AI image generator."
             }
+          },
+          required: ["description", "image_prompt"]
         }
-    });
-    
-    try {
-        const jsonResponse = JSON.parse(response.text);
-        return {
-            topPerformer: jsonResponse.topPerformerAnalysis,
-            optimization: jsonResponse.underperformerAnalysis,
-            newBlueprint: jsonResponse.newBlueprint as AdCreative
-        };
-    } catch (error) {
-        console.error("Failed to parse performance insights response:", error, response.text);
-        throw new Error("Failed to process the AI's performance analysis due to an invalid format.");
+      }
     }
+  });
+
+  const jsonResponse = JSON.parse(response.text);
+  if (Array.isArray(jsonResponse) && jsonResponse.length > 0) {
+    return jsonResponse;
+  }
+  throw new Error("The AI's response was not a valid storyboard array.");
+};
+
+export const generateVideo = async (prompt: string, image: File | null, aspectRatio: '16:9' | '9:16', onProgress: (message: string) => void) => {
+    const veoAI = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    let operation;
+    const config = { numberOfVideos: 1, resolution: '720p', aspectRatio };
+    
+    onProgress("Starting video generation...");
+    if (image) {
+        const imageBase64 = await fileToBase64(image);
+        operation = await veoAI.models.generateVideos({ model: veoModel, prompt, image: { imageBytes: imageBase64, mimeType: image.type }, config });
+    } else {
+        operation = await veoAI.models.generateVideos({ model: veoModel, prompt, config });
+    }
+
+    onProgress("Processing request... this can take several minutes.");
+    while (!operation.done) {
+        await new Promise(resolve => setTimeout(resolve, 10000));
+        onProgress("Checking video status...");
+        operation = await veoAI.operations.getVideosOperation({ operation: operation });
+    }
+
+    onProgress("Finalizing video...");
+    const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
+    if (!downloadLink) throw new Error("Video generation completed, but no download link was provided.");
+    
+    const response = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
+    if (!response.ok) throw new Error(`Failed to download the generated video. Status: ${response.status}`);
+    return response.blob();
+};
+
+export const generateImage = async (prompt: string, aspectRatio: '1:1' | '16:9' | '9:16' | '4:3' | '3:4'): Promise<string> => {
+    const response = await ai.models.generateImages({ model: imageGenModel, prompt, config: { numberOfImages: 1, outputMimeType: 'image/jpeg', aspectRatio } });
+    const base64ImageBytes: string = response.generatedImages[0].image.imageBytes;
+    return `data:image/jpeg;base64,${base64ImageBytes}`;
+};
+
+export const editImage = async (imageFile: File, prompt: string): Promise<string> => {
+    const base64Data = await fileToBase64(imageFile);
+    const response = await ai.models.generateContent({ model: imageEditModel, contents: { parts: [{ inlineData: { data: base64Data, mimeType: imageFile.type } }, { text: prompt }] }, config: { responseModalities: [Modality.IMAGE] } });
+    for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData) return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+    }
+    throw new Error("AI did not return an edited image.");
+};
+
+export const analyzeImage = async (imageFile: File, prompt: string): Promise<string> => {
+    const base64Data = await fileToBase64(imageFile);
+    const response = await ai.models.generateContent({ model: fastModel, contents: { parts: [{ inlineData: { mimeType: imageFile.type, data: base64Data } }, { text: prompt }] } });
+    return response.text;
+};
+
+export const understandVideo = async (frames: string[], prompt: string): Promise<string> => {
+  const imageParts = frames.map(frame => ({ inlineData: { mimeType: 'image/jpeg', data: frame } }));
+  const fullPrompt = `You are an expert video analysis AI. Analyze the provided sequence of video frames and answer the user's question with a detailed and comprehensive response.\n\nUser's question: "${prompt}"`;
+  const response = await ai.models.generateContent({ model: proModel, contents: { parts: [...imageParts, { text: fullPrompt }] } });
+  return response.text;
+};
+
+export const generateSpeech = async (text: string): Promise<string> => {
+    const response = await ai.models.generateContent({ model: ttsModel, contents: [{ parts: [{ text }] }], config: { responseModalities: [Modality.AUDIO], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } } } });
+    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    if (!base64Audio) throw new Error("AI did not return any audio data.");
+    return base64Audio;
+};
+
+export const initChat = (): Chat => ai.chats.create({ model: chatModel, config: { systemInstruction: "You are an expert Meta Ads strategist and creative assistant. Help me brainstorm ideas, write copy, and develop strategies for high-converting ads. Keep your responses concise and actionable." } });
+
+export const connectLive = (callbacks: { onopen: () => void; onmessage: (message: any) => Promise<void>; onerror: (e: ErrorEvent) => void; onclose: (e: CloseEvent) => void; }): Promise<any> => {
+    return ai.live.connect({ model: liveModel, callbacks, config: { responseModalities: [Modality.AUDIO], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } } }, inputAudioTranscription: {}, outputAudioTranscription: {}, systemInstruction: 'You are an AI ad strategist. Talk with me to brainstorm ideas. Be friendly and keep your responses brief.' } });
 };

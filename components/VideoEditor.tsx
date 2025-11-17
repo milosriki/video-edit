@@ -1,4 +1,5 @@
 
+
 import React, { useState, useRef, useEffect } from 'react';
 import { AdCreative } from '../types';
 import { processVideoWithCreative } from '../services/videoProcessor';
@@ -7,11 +8,11 @@ import { formatErrorMessage } from '../utils/error';
 
 interface VideoEditorProps {
   adCreative: AdCreative;
-  sourceVideo: File;
+  sourceVideos: File[]; // MODIFIED: Now accepts multiple source videos for remixing
   onClose: () => void;
 }
 
-const VideoEditor: React.FC<VideoEditorProps> = ({ adCreative, sourceVideo, onClose }) => {
+const VideoEditor: React.FC<VideoEditorProps> = ({ adCreative, sourceVideos, onClose }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState('');
@@ -38,7 +39,7 @@ const VideoEditor: React.FC<VideoEditorProps> = ({ adCreative, sourceVideo, onCl
 
     try {
       const outputBlob = await processVideoWithCreative(
-        sourceVideo,
+        sourceVideos, // MODIFIED: Pass all source videos
         adCreative,
         (p) => {
           setProgress(p.progress * 100);
@@ -82,18 +83,19 @@ const VideoEditor: React.FC<VideoEditorProps> = ({ adCreative, sourceVideo, onCl
           <div className="flex flex-col gap-4">
              <div>
                 <h3 className="text-lg font-semibold">{adCreative.variationTitle}</h3>
-                <p className="text-sm text-gray-400">Blueprint for: "{sourceVideo.name}"</p>
+                <p className="text-sm text-gray-400">Blueprint for: "{adCreative.primarySourceFileName}"</p>
             </div>
             <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700/50 flex-grow">
                 <h4 className="text-base font-bold text-gray-300 mb-3 flex items-center gap-2">
                     <FilmIcon className="w-5 h-5 text-indigo-400"/>
-                    Editing Blueprint
+                    Remixing Blueprint
                 </h4>
                 <div className="space-y-3 text-xs max-h-60 overflow-y-auto pr-2">
                     {adCreative.editPlan.map((scene, sceneIndex) => (
                         <div key={sceneIndex} className="flex gap-3">
                             <div className="font-mono text-indigo-400 whitespace-nowrap pt-px">{scene.timestamp}</div>
                             <div className="border-l-2 border-gray-700 pl-3">
+                                <p><strong className="text-gray-400">Source:</strong> {scene.sourceFile}</p>
                                 <p><strong className="text-gray-400">Visual:</strong> {scene.visual}</p>
                                 <p><strong className="text-gray-400">Edit:</strong> {scene.edit}</p>
                                 {scene.overlayText !== 'N/A' && <p><strong className="text-gray-400">Text:</strong> "{scene.overlayText}"</p>}
