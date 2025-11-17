@@ -1,23 +1,20 @@
 import 'dotenv/config';
-// FIX: Removed explicit Request/Response imports to let Express infer handler types
 import express from 'express';
 import cors from 'cors';
 import Database from 'better-sqlite3';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-// FIX: Import all necessary functions from geminiService
 import { 
   analyzeVideoContent, 
   generateAdCreatives, 
   rankCreatives, 
   CampaignBrief,
-  getAvatars // This was missing in your guide's version
+  getAvatars 
 } from './services/geminiService.js';
 import * as avatars from './ai/knowledge/avatars.json' with { type: 'json' };
 
 const app = express();
 app.use(cors());
-// FIX: Cast to any to resolve a middleware type overload issue.
 app.use(express.json({ limit: '50mb' }) as any);
 
 const __filename = fileURLToPath(import.meta.url);
@@ -82,13 +79,10 @@ if (count.count === 0) {
   console.log('Mock data seeded.');
 }
 
-
 // --- NEW AI ENDPOINTS ---
 
-// FIX: Remove explicit types from req, res to allow for type inference
 app.get('/api/avatars', (_req, res) => {
   try {
-    // FIX: Use the getAvatars function from the service
     const avatarList = getAvatars();
     res.json(avatarList);
   } catch (error) {
@@ -97,7 +91,6 @@ app.get('/api/avatars', (_req, res) => {
   }
 });
 
-// FIX: Remove explicit types from req, res to allow for type inference
 app.post('/api/analyze', async (req, res) => {
   try {
     const { allVideoData } = req.body;
@@ -112,7 +105,6 @@ app.post('/api/analyze', async (req, res) => {
   }
 });
 
-// FIX: Remove explicit types from req, res to allow for type inference
 app.post('/api/creatives', async (req, res) => {
   try {
     const { brief, avatarKey, strategy } = req.body as { 
@@ -123,7 +115,6 @@ app.post('/api/creatives', async (req, res) => {
     if (!brief || !avatarKey || !strategy) {
       return res.status(400).json({ error: 'Invalid request: "brief", "avatarKey", and "strategy" are required.' });
     }
-    // FIX: Access the default export for the JSON module and correct the check.
     if (!Object.keys((avatars as any).default).includes(avatarKey)) {
         return res.status(400).json({ error: `Invalid avatarKey specified: ${avatarKey}` });
     }
@@ -136,7 +127,6 @@ app.post('/api/creatives', async (req, res) => {
   }
 });
 
-// FIX: Remove explicit types from req, res to allow for type inference
 app.post('/api/creatives/rank', async (req, res) => {
   try {
     const { creatives, avatarKey, brief } = req.body || {};
@@ -150,7 +140,6 @@ app.post('/api/creatives/rank', async (req, res) => {
     res.status(500).json({ error: e?.message ?? 'Failed to rank creatives' });
   }
 });
-
 
 // --- PERFORMANCE DASHBOARD ENDPOINTS ---
 type SSEClient = { id: number; res: any };
@@ -246,12 +235,12 @@ app.get('/api/timeseries', (req, res) => {
             ${tsGroup} as ts,
             SUM(${metric}) as value
         FROM metrics
-        WHERE ts >= ? AND ts <= ? AND creative_id = ?
+        WHERE creative_id = ? AND ts >= ? AND ts <= ?
         GROUP BY 1
         ORDER BY 1
     `);
 
-    const results = stmt.all(from, to, creativeId);
+    const results = stmt.all(creativeId, from, to);
     res.json(results);
 });
 
