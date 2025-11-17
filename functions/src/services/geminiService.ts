@@ -4,13 +4,27 @@ import * as avatars from '../ai/knowledge/avatars.json' with { type: 'json' };
 import * as copyDB from '../ai/knowledge/copyDatabase.json' with { type: 'json' };
 
 // Re-exporting types for use in the main server file.
-export type { CampaignBrief } from '../../../types';
-export type { CampaignStrategy } from '../../../types';
-export type { AdCreative } from '../../../types';
-export type { CreativeRanking } from '../../../types';
+export type { CampaignBrief } from '../types.js';
+export type { CampaignStrategy } from '../types.js';
+export type { AdCreative } from '../types.js';
+export type { CreativeRanking } from '../types.js';
 
-// FIX: This now correctly uses the imported `functions` module to get the API key
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY ?? functions.config().gemini.api_key });
+// FIX: Get API key from environment variable (preferred in Firebase Functions v2)
+// If functions.config() is needed, ensure it's properly configured in Firebase
+const getApiKey = (): string => {
+  const envKey = process.env.GEMINI_API_KEY;
+  if (envKey) return envKey;
+
+  // Fallback to functions.config() if available (type assertion needed for older API)
+  try {
+    const config = (functions as any).config?.();
+    return config?.gemini?.api_key || '';
+  } catch {
+    return '';
+  }
+};
+
+const ai = new GoogleGenAI({ apiKey: getApiKey() });
 const analysisModel = 'gemini-2.5-pro';
 const adGenerationModel = 'gemini-2.5-flash';
 
@@ -35,7 +49,7 @@ export function getAvatars() {
 }
 
 /** Analyze a set of user videos and produce a strategy */
-export async function analyzeVideoContent(allVideoData: any[]): Promise<import('../../../types').CampaignStrategy> {
+export async function analyzeVideoContent(allVideoData: any[]): Promise<import('../types.js').CampaignStrategy> {
     const systemPrompt = `You are an expert AI video intelligence analyst for the Dubai/Abu Dhabi market. Your task is to perform a deep analysis of each video's visual and audio content and then devise a winning campaign strategy.
     **Part 1: Individual Video Analysis**
     For each video, provide a detailed breakdown. Rank them from best to worst based on their potential to be a successful direct-response ad. Consider factors like visual clarity, hook potential, emotional appeal, clear depiction of fitness activities, and the strength of the spoken message.
@@ -44,7 +58,7 @@ export async function analyzeVideoContent(allVideoData: any[]): Promise<import('
     Strictly adhere to the JSON schema provided.`;
     
     const filePrompts = allVideoData.map(({ videoFile, frames, transcription }) => {
-        const imageParts = frames.map(frame => ({
+        const imageParts = frames.map((frame: string) => ({
           inlineData: { mimeType: 'image/jpeg', data: frame },
         }));
         const textParts = [{ text: `---VIDEO_FILE_START--- ---VIDEO_NAME:${videoFile.id}---` }];
@@ -79,12 +93,13 @@ export async function analyzeVideoContent(allVideoData: any[]): Promise<import('
 
 /** Generate 10 ad creative blueprints with strict schema */
 export async function generateAdCreatives(
-    brief: import('../../../types').CampaignBrief,
+    brief: import('../types.js').CampaignBrief,
     avatarKey: string,
-    strategy: import('../../../types').CampaignStrategy
-): Promise<import('../../../types').AdCreative[]> {
+    strategy: import('../types.js').CampaignStrategy
+): Promise<import('../types.js').AdCreative[]> {
     const avatar = (avatars as any).default[avatarKey];
-    const relevantHeadlines = (copyDB as any).default.headlines[avatarKey as keyof typeof (copyDB as any).default.headlines];
+    const copyDBData = (copyDB as any).default;
+    const relevantHeadlines = copyDBData.headlines[avatarKey] || [];
 
     const masterPrompt = `You are the PTD Fitness Creative Dominator, an elite AI strategist for the Dubai & Abu Dhabi premium market.
 **MISSION:**
@@ -157,10 +172,10 @@ Generate 10 distinct, high-converting direct-response video ad blueprints based 
 
 /** Rank creatives by predicted ROI and return scores */
 export async function rankCreatives(
-    brief: import('../../../types').CampaignBrief,
+    brief: import('../types.js').CampaignBrief,
     avatarKey: string,
-    creatives: import('../../../types').AdCreative[]
-): Promise<import('../../../types').CreativeRanking[]> {
+    creatives: import('../types.js').AdCreative[]
+): Promise<import('../types.js').CreativeRanking[]> {
     const avatar = (avatars as any).default[avatarKey];
 
     const creativesString = creatives.map((c, i) => `
