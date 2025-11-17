@@ -73,7 +73,8 @@ export async function generateAdCreatives(
   strategy: import('../../../types').CampaignStrategy
 ): Promise<import('../../../types').AdCreative[]> {
   const avatar = (avatars as any).default[avatarKey];
-  const relevantHeadlines = (copyDB as any).default.headlines[avatarKey as keyof typeof (copyDB as any).default.headlines];
+  const copyDatabase = (copyDB as any).default;
+  const relevantHeadlines = copyDatabase.headlines?.[avatarKey] || [];
 
   const masterPrompt = `You are the PTD Fitness Creative Dominator... [Your full ad generation prompt here, using the PTD frameworks] ...`;
 
