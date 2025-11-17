@@ -1,23 +1,22 @@
+import * as functions from "firebase-functions"; // <-- FIX: ADDED THIS IMPORT
 import { GoogleGenAI, Type } from '@google/genai';
-// FIX: Update JSON import paths to be relative to the new /functions folder
 import * as avatars from '../ai/knowledge/avatars.json' with { type: 'json' };
 import * as copyDB from '../ai/knowledge/copyDatabase.json' with { type: 'json' };
 
 // Re-exporting types for use in the main server file.
-// FIX: Update type import path
 export type { CampaignBrief } from '../../../types';
 export type { CampaignStrategy } from '../../../types';
 export type { AdCreative } from '../../../types';
 export type { CreativeRanking } from '../../../types';
 
-
+// FIX: This now correctly uses the imported `functions` module
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY ?? functions.config().gemini.api_key });
 const analysisModel = 'gemini-2.5-pro';
 const adGenerationModel = 'gemini-2.5-flash';
 
 /**
  * FIX: This helper function reads the AI's response text safely.
- * It handles if response.text is a property OR a function.
+ * (All invisible characters have been removed)
  */
 function readGenAIText(resp: any): string {
   const t = typeof resp.text === 'function' ? resp.text() : resp.text;
@@ -28,7 +27,6 @@ function readGenAIText(resp: any): string {
 }
 
 export function getAvatars() {
-    // FIX: Added missing return statement.
     return Object.entries((avatars as any).default).map(([key, v]) => ({
         key,
         name: (v as any)?.name ?? key,
@@ -75,7 +73,6 @@ Strictly adhere to the JSON schema provided.`;
                   strategyJustification: { type: Type.STRING },
                   videoAnalyses: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { rank: { type: Type.NUMBER }, fileName: { type: Type.STRING }, justification: { type: Type.STRING }, summary: { type: Type.STRING }, sceneDescriptions: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { timestamp: { type: Type.STRING }, description: { type: Type.STRING }}, required: ["timestamp", "description"]}}, keyObjects: { type: Type.ARRAY, items: { type: Type.STRING }}, emotionalTone: { type: Type.ARRAY, items: { type: Type.STRING }}, audioAnalysis: { type: Type.OBJECT, nullable: true, properties: { summary: { type: Type.STRING }, keyPhrases: { type: Type.ARRAY, items: { type: Type.STRING }}, callsToAction: { type: Type.ARRAY, items: { type: Type.STRING }}}, required: ["summary", "keyPhrases", "callsToAction"]}}, veoHookSuggestion: { type: Type.STRING, nullable: true }}, required: ["rank", "fileName", "justification", "summary", "sceneDescriptions", "keyObjects", "emotionalTone"]}}
               },
-              // FIX: Corrected typo from "videoAnalses" to "videoAnalyses"
               required: ["primaryVideoFileName", "bRollFileNames", "strategyJustification", "videoAnalyses"]
             }
         }
