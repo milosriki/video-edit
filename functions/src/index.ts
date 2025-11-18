@@ -1,19 +1,20 @@
 import * as functions from 'firebase-functions';
-import * as admin from 'firebase-admin';
+import { initializeApp } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 import express from 'express';
 import cors from 'cors';
-import { 
-  analyzeVideoContent, 
-  generateAdCreatives, 
-  rankCreatives, 
+import {
+  analyzeVideoContent,
+  generateAdCreatives,
+  rankCreatives,
   CampaignBrief,
   getAvatars
 } from './services/geminiService.js';
 import * as avatars from './ai/knowledge/avatars.json' with { type: 'json' };
 
 // Initialize Firebase Admin
-admin.initializeApp();
-const db = admin.firestore();
+initializeApp();
+const db = getFirestore();
 
 const app = express();
 app.use(cors({ origin: true }));
