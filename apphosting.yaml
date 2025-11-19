@@ -1,7 +1,7 @@
 runConfig:
   runtime: nodejs20
   buildCommand: npm ci && npm run build
-  startCommand: npx serve dist -l $PORT
+  startCommand: npx serve dist -l tcp://0.0.0.0:$PORT
 
 env:
   - variable: VITE_FIREBASE_API_KEY
