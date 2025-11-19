@@ -1,7 +1,9 @@
 // services/apiClient.ts
 import type { CampaignBrief, CampaignStrategy, AdCreative, Avatar, CreativeRanking } from '../types';
 
-const API_BASE_URL = '/api'; // Vite dev server proxies this to http://localhost:4000
+const API_BASE_URL = import.meta.env.DEV 
+  ? '/api' // Local dev server proxy
+  : 'https://us-central1-ptd-fitness-demo.cloudfunctions.net/api'; // Production Cloud Functions
 
 async function handleResponse<T>(response: Response): Promise<T> {
     const contentType = response.headers.get('content-type') || '';
