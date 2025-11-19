@@ -1,9 +1,13 @@
 // Import Firebase Functions module
-import * as functions from 'firebase-functions';
+import { onRequest } from 'firebase-functions/v2/https';
+import { defineSecret } from 'firebase-functions/params';
 
 // Import specific modules from firebase-admin for modular imports
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
+
+// Define the secret
+const geminiApiKey = defineSecret('GEMINI_API_KEY');
 
 // Import Express and CORS for HTTP functions
 import express from 'express';
@@ -284,6 +288,13 @@ app.post('/events', async (req, res) => {
 // as it requires a persistent connection which is not ideal for serverless functions.
 // Consider using Firebase Realtime Database or Firestore listeners on the client side instead.
 
-// Export the Express app as a Firebase Function
-export const api = functions.https.onRequest(app);
+// Export the Express app as a Firebase Function with secrets (v2)
+export const api = onRequest(
+  { 
+    secrets: [geminiApiKey],
+    memory: '256MiB',
+    timeoutSeconds: 540
+  }, 
+  app
+);
 

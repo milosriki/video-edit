@@ -55,10 +55,11 @@ export async function analyzeVideoContent(allVideoData: any[]): Promise<import('
     Strictly adhere to the JSON schema provided.`;
     
     const filePrompts = allVideoData.map(({ videoFile, frames, transcription }) => {
-        const imageParts = frames.map((frame: string) => ({
+        const imageParts = (frames || []).map((frame: string) => ({
           inlineData: { mimeType: 'image/jpeg', data: frame },
         }));
-        const textParts = [{ text: `---VIDEO_FILE_START--- ---VIDEO_NAME:${videoFile.id}---` }];
+        const videoId = videoFile?.id || videoFile?.name || 'unknown';
+        const textParts = [{ text: `---VIDEO_FILE_START--- ---VIDEO_NAME:${videoId}---` }];
         if (transcription) {
           textParts.push({ text: `---TRANSCRIPTION---\n${transcription}\n---END_TRANSCRIPTION---` });
         }
