@@ -13,7 +13,8 @@
     "@tanstack/react-query": "^5.51.1",
     "firebase": "^12.6.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "serve": "^14.2.3"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
