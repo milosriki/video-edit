@@ -2,7 +2,7 @@ runConfig:
   runtime: nodejs20
   buildCommand: npm ci && npm run build
   startCommand: npm run preview
-  
+
 env:
   - variable: VITE_FIREBASE_API_KEY
     secret: firebase-api-key
