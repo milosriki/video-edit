@@ -1,26 +1,39 @@
+// Import Firebase Functions module
 import * as functions from 'firebase-functions';
-import admin from 'firebase-admin';
+
+// Import specific modules from firebase-admin for modular imports
+import { initializeApp } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+
+// Import Express and CORS for HTTP functions
 import express from 'express';
 import cors from 'cors';
-import { 
-  analyzeVideoContent, 
-  generateAdCreatives, 
-  rankCreatives, 
+
+// Import services and types from your local files
+import {
+  analyzeVideoContent,
+  generateAdCreatives,
+  rankCreatives,
   CampaignBrief,
   getAvatars
 } from './services/geminiService.js';
 import * as avatars from './ai/knowledge/avatars.json' with { type: 'json' };
 
-// Initialize Firebase Admin
-admin.initializeApp();
-const db = admin.firestore();
+// Initialize Firebase Admin SDK
+// Using the modular import 'initializeApp' function directly
+initializeApp();
 
+// Get a Firestore instance using the modular import 'getFirestore' function
+const db = getFirestore();
+
+// Initialize the Express app
 const app = express();
 app.use(cors({ origin: true }));
-app.use(express.json({ limit: '50mb' }) as any);
+app.use(express.json({ limit: '50mb' }) as any); // Type assertion for express.json middleware
 
 // --- AI ENDPOINTS ---
 
+// Endpoint to get customer avatars
 app.get('/avatars', (_req, res) => {
   try {
     const avatarList = getAvatars();
@@ -31,6 +44,7 @@ app.get('/avatars', (_req, res) => {
   }
 });
 
+// Endpoint to analyze video content
 app.post('/analyze', async (req, res) => {
   try {
     const { allVideoData } = req.body;
@@ -45,16 +59,18 @@ app.post('/analyze', async (req, res) => {
   }
 });
 
+// Endpoint to generate ad creatives
 app.post('/creatives', async (req, res) => {
   try {
-    const { brief, avatarKey, strategy } = req.body as { 
-      brief: CampaignBrief, 
-      avatarKey: string, 
-      strategy: any 
+    const { brief, avatarKey, strategy } = req.body as {
+      brief: CampaignBrief,
+      avatarKey: string,
+      strategy: any
     };
     if (!brief || !avatarKey || !strategy) {
       return res.status(400).json({ error: 'Invalid request: "brief", "avatarKey", and "strategy" are required.' });
     }
+    // Check if the avatarKey exists in your avatars data
     if (!Object.keys((avatars as any).default).includes(avatarKey)) {
         return res.status(400).json({ error: `Invalid avatarKey specified: ${avatarKey}` });
     }
@@ -67,6 +83,7 @@ app.post('/creatives', async (req, res) => {
   }
 });
 
+// Endpoint to rank ad creatives
 app.post('/creatives/rank', async (req, res) => {
   try {
     const { creatives, avatarKey, brief } = req.body || {};
@@ -83,8 +100,10 @@ app.post('/creatives/rank', async (req, res) => {
 
 // --- PERFORMANCE DASHBOARD ENDPOINTS (Firestore-based) ---
 
+// Health check endpoint
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
+// Endpoint to get an overview of metrics within a time range
 app.get('/overview', async (req, res) => {
   try {
     const { from, to } = req.query;
@@ -121,6 +140,7 @@ app.get('/overview', async (req, res) => {
   }
 });
 
+// Endpoint to get creative performance metrics
 app.get('/creatives', async (req, res) => {
   try {
     const { from, to, sort = 'roas', order = 'desc', limit = 50 } = req.query;
@@ -142,6 +162,7 @@ app.get('/creatives', async (req, res) => {
       const creativeId = data.creative_id;
 
       if (!creativesMap.has(creativeId)) {
+        // Fetch creative details only once per creativeId
         const creativeDoc = await db.collection('creatives').doc(creativeId).get();
         const creativeData = creativeDoc.data();
         
@@ -191,6 +212,7 @@ app.get('/creatives', async (req, res) => {
   }
 });
 
+// Endpoint for timeseries data of a specific creative
 app.get('/timeseries', async (req, res) => {
   try {
     const { from, to, creativeId, metric = 'revenue' } = req.query;
@@ -231,6 +253,7 @@ app.get('/timeseries', async (req, res) => {
   }
 });
 
+// Endpoint to ingest performance events
 app.post('/events', async (req, res) => {
   try {
     const events = Array.isArray(req.body) ? req.body : [req.body];
@@ -263,3 +286,4 @@ app.post('/events', async (req, res) => {
 
 // Export the Express app as a Firebase Function
 export const api = functions.https.onRequest(app);
+

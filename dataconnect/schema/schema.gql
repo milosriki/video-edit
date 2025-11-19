@@ -1,0 +1,55 @@
+type User @table {
+  displayName: String!
+  createdAt: Timestamp!
+  email: String
+  photoUrl: String
+}
+
+type Project @table {
+  name: String!
+  createdAt: Timestamp!
+  owner: User!
+  description: String
+  status: String
+}
+
+type Asset @table {
+  filename: String!
+  fileType: String!
+  url: String!
+  createdAt: Timestamp!
+  project: Project!
+  uploader: User!
+  duration: Int
+  thumbnailUrl: String
+}
+
+type TimelineEntry @table {
+  project: Project!
+  asset: Asset!
+  startTime: Int!
+  endTime: Int!
+  trackNumber: Int
+  orderIndex: Int
+  transformations: String
+}
+
+type Comment @table {
+  content: String!
+  timestamp: Int!
+  createdAt: Timestamp!
+  project: Project!
+  user: User!
+  parentComment: Comment
+}
+
+type Task @table {
+  description: String!
+  project: Project!
+  assigner: User!
+  assignee: User!
+  createdAt: Timestamp!
+  status: String!
+  dueDate: Timestamp
+  completedAt: Timestamp
+}
