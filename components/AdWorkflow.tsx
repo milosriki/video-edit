@@ -255,6 +255,10 @@ const AdWorkflow: React.FC = () => {
         }
     };
     loadAvatars();
+    
+    // Pre-initialize Google Drive Service to ensure scripts are loaded
+    // This prevents popup blockers from blocking the sign-in window later
+    googleDriveService.init().catch(err => console.warn("Background init of Google Drive failed:", err));
   }, [selectedAvatar]);
 
   const handleConnectDrive = async () => {
@@ -347,7 +351,7 @@ const AdWorkflow: React.FC = () => {
   };
   
   const handleSelectFromDrive = async () => {
-      const filesToDownload = Object.values(selectedDriveFiles);
+      const filesToDownload = Object.values(selectedDriveFiles) as MockDriveFile[];
       if (filesToDownload.length === 0) return;
       setIsDrivePickerOpen(false);
       setIsProcessing(true);
@@ -451,9 +455,19 @@ const AdWorkflow: React.FC = () => {
                           </div>
                       ))}
                   </div>
-                  <footer className="p-4 border-t border-gray-700">
-                      <button onClick={handleSelectFromDrive} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg">
+                  <footer className="p-4 border-t border-gray-700 flex gap-4">
+                      <button onClick={handleSelectFromDrive} className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg">
                           Select {Object.keys(selectedDriveFiles).length} Files
+                      </button>
+                      <button onClick={() => {
+                          // Smart Scan Simulation: Select first 3 files automatically
+                          const newSelection: Record<string, MockDriveFile> = {};
+                          driveFiles.slice(0, 3).forEach(f => newSelection[f.id] = f);
+                          setSelectedDriveFiles(newSelection);
+                          // Then trigger download automatically after a short delay to show selection
+                          setTimeout(handleSelectFromDrive, 500);
+                      }} className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2">
+                          <SparklesIcon className="w-5 h-5"/> Smart Scan & Analyze
                       </button>
                   </footer>
               </div>

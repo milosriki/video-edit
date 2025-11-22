@@ -145,7 +145,7 @@ const AnalysisResultCard: React.FC<AnalysisResultCardProps> = ({ videoFile, onGe
                 <div className="text-sm max-h-48 overflow-y-auto pr-2">
                     {activeTab === 'scenes' && (
                         <div className="space-y-3">
-                            {analysisResult.sceneDescriptions.map((scene, i: number) => (
+                            {analysisResult.sceneDescriptions?.map((scene, i: number) => (
                                 <div key={i} className="flex gap-3">
                                     <div className="font-mono text-indigo-400 whitespace-nowrap">{scene.timestamp}</div>
                                     <p className="text-gray-300">{scene.description}</p>
@@ -155,12 +155,12 @@ const AnalysisResultCard: React.FC<AnalysisResultCardProps> = ({ videoFile, onGe
                     )}
                     {activeTab === 'elements' && (
                         <div className="flex flex-wrap gap-2">
-                            {analysisResult.keyObjects.map((obj: string, i: number) => <span key={i} className="bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{obj}</span>)}
+                            {analysisResult.keyObjects?.map((obj: string, i: number) => <span key={i} className="bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{obj}</span>)}
                         </div>
                     )}
                     {activeTab === 'tone' && (
                          <div className="flex flex-wrap gap-2">
-                            {analysisResult.emotionalTone.map((tone: string, i: number) => <span key={i} className="bg-purple-800 text-purple-200 px-2 py-1 rounded-full">{tone}</span>)}
+                            {analysisResult.emotionalTone?.map((tone: string, i: number) => <span key={i} className="bg-purple-800 text-purple-200 px-2 py-1 rounded-full">{tone}</span>)}
                         </div>
                     )}
                     {activeTab === 'audio' && hasAudioAnalysis && analysisResult.audioAnalysis && (
@@ -169,16 +169,16 @@ const AnalysisResultCard: React.FC<AnalysisResultCardProps> = ({ videoFile, onGe
                                 <h5 className="font-semibold text-gray-400 mb-1">Speech Summary</h5>
                                 <p className="text-gray-300">{analysisResult.audioAnalysis.summary}</p>
                             </div>
-                            {analysisResult.audioAnalysis.keyPhrases.length > 0 && <div>
+                            {analysisResult.audioAnalysis.keyPhrases?.length > 0 && <div>
                                 <h5 className="font-semibold text-gray-400 mb-2">Key Phrases</h5>
                                 <div className="flex flex-wrap gap-2">
-                                    {analysisResult.audioAnalysis.keyPhrases.map((phrase, i) => <span key={i} className="bg-blue-800 text-blue-200 px-2 py-1 rounded-full">{phrase}</span>)}
+                                    {analysisResult.audioAnalysis.keyPhrases?.map((phrase, i) => <span key={i} className="bg-blue-800 text-blue-200 px-2 py-1 rounded-full">{phrase}</span>)}
                                 </div>
                             </div>}
-                             {analysisResult.audioAnalysis.callsToAction.length > 0 && <div>
+                             {analysisResult.audioAnalysis.callsToAction?.length > 0 && <div>
                                 <h5 className="font-semibold text-gray-400 mb-2">Calls to Action</h5>
                                 <div className="flex flex-wrap gap-2">
-                                    {analysisResult.audioAnalysis.callsToAction.map((cta, i) => <span key={i} className="bg-green-800 text-green-200 px-2 py-1 rounded-full">{cta}</span>)}
+                                    {analysisResult.audioAnalysis.callsToAction?.map((cta, i) => <span key={i} className="bg-green-800 text-green-200 px-2 py-1 rounded-full">{cta}</span>)}
                                 </div>
                             </div>}
                         </div>

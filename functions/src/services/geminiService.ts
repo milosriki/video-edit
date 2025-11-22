@@ -1,6 +1,7 @@
 import { GoogleGenAI, Type } from '@google/genai';
-import * as avatars from '../ai/knowledge/avatars.json' with { type: 'json' };
-import * as copyDB from '../ai/knowledge/copyDatabase.json' with { type: 'json' };
+import avatars from '../ai/knowledge/avatars.js';
+import copyDB from '../ai/knowledge/copyDatabase.js';
+import winningAdsDB from '../ai/knowledge/winningAdsDatabase.js';
 
 // Re-exporting types for use in the main server file.
 export type { CampaignBrief } from '../types.js';
@@ -22,8 +23,8 @@ function getAI(): GoogleGenAI {
   return aiInstance;
 }
 
-const analysisModel = 'gemini-2.5-pro';
-const adGenerationModel = 'gemini-2.5-flash';
+const analysisModel = 'gemini-1.5-pro';
+const adGenerationModel = 'gemini-1.5-flash';
 
 /**
  * FIX: This helper function reads the AI's response text safely.
@@ -37,7 +38,7 @@ function readGenAIText(resp: any): string {
 }
 
 export function getAvatars() {
-    return Object.entries((avatars as any).default).map(([key, v]) => ({
+    return Object.entries((avatars as any)).map(([key, v]) => ({
         key,
         name: (v as any)?.name ?? key,
         pain_points: (v as any)?.pain_points,
@@ -47,11 +48,30 @@ export function getAvatars() {
 
 /** Analyze a set of user videos and produce a strategy */
 export async function analyzeVideoContent(allVideoData: any[]): Promise<import('../types.js').CampaignStrategy> {
-    const systemPrompt = `You are an expert AI video intelligence analyst for the Dubai/Abu Dhabi market. Your task is to perform a deep analysis of each video's visual and audio content and then devise a winning campaign strategy.
+    const neuroHooks = (winningAdsDB as any).neuro_hooks.join(', ');
+    const systemPrompt = `You are "Andromeda AI", an elite video intelligence analyst and neuro-marketing expert for the Dubai/Abu Dhabi market.
+    **MISSION:**
+    Perform a deep forensic analysis of each video's visual, audio, and psychological impact to devise a winning campaign strategy.
+    
+    **KNOWLEDGE BASE (NEURO-MARKETING):**
+    Apply these principles: ${neuroHooks}. Look for "Eye Patterns" (direct gaze), "Pattern Interrupts" (sudden visual changes), and "Emotional Micro-expressions".
+
     **Part 1: Individual Video Analysis**
-    For each video, provide a detailed breakdown. Rank them from best to worst based on their potential to be a successful direct-response ad. Consider factors like visual clarity, hook potential, emotional appeal, clear depiction of fitness activities, and the strength of the spoken message.
+    For each video, provide a detailed breakdown. Rank them from best to worst based on their potential to be a successful direct-response ad.
+    - **Visual Clarity:** Is the lighting professional? Is the resolution high?
+    - **Hook Potential:** Does the first 3 seconds contain a "Pattern Interrupt"?
+    - **Emotional Appeal:** Does it trigger specific emotions (Desire, Fear of Missing Out, Status)?
+    - **Fitness Specifics:** Does it show correct form? Is the physique aspirational?
+
     **Part 2: Overall Campaign Strategy**
-    After analyzing all videos, create a unified campaign strategy. Select the single best video as the 'Primary Video' and identify any other videos that contain valuable clips suitable for 'B-Roll' footage in a remixed ad. Justify your choices.
+    Select the single best video as the 'Primary Video' and identify 'B-Roll' candidates. Justify your choices using neuro-marketing terminology.
+
+    **Part 3: Deep Emotional & Hook Analysis**
+    Identify specific timestamps for:
+    - **Hooks:** Moments that stop the scroll (0-3s).
+    - **Emotional Peaks:** Moments of intense struggle or triumph.
+    - **CTA Opportunities:** Moments of calm or direct address suitable for an offer overlay.
+
     Strictly adhere to the JSON schema provided.`;
     
     const filePrompts = allVideoData.map(({ videoFile, frames, transcription }) => {
@@ -72,14 +92,14 @@ export async function analyzeVideoContent(allVideoData: any[]): Promise<import('
         contents: [{ parts: [...filePrompts, { text: systemPrompt }] }],
         config: {
             responseMimeType: "application/json",
-            maxOutputTokens: 32768, 
+            maxOutputTokens: 8192, 
             responseSchema: {
               type: Type.OBJECT,
               properties: {
                   primaryVideoFileName: { type: Type.STRING },
                   bRollFileNames: { type: Type.ARRAY, items: { type: Type.STRING } },
                   strategyJustification: { type: Type.STRING },
-                  videoAnalyses: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { rank: { type: Type.NUMBER }, fileName: { type: Type.STRING }, justification: { type: Type.STRING }, summary: { type: Type.STRING }, sceneDescriptions: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { timestamp: { type: Type.STRING }, description: { type: Type.STRING }}, required: ["timestamp", "description"]}}, keyObjects: { type: Type.ARRAY, items: { type: Type.STRING }}, emotionalTone: { type: Type.ARRAY, items: { type: Type.STRING }}, audioAnalysis: { type: Type.OBJECT, nullable: true, properties: { summary: { type: Type.STRING }, keyPhrases: { type: Type.ARRAY, items: { type: Type.STRING }}, callsToAction: { type: Type.ARRAY, items: { type: Type.STRING }}}, required: ["summary", "keyPhrases", "callsToAction"]}, veoHookSuggestion: { type: Type.STRING, nullable: true }}, required: ["rank", "fileName", "justification", "summary", "sceneDescriptions", "keyObjects", "emotionalTone"]}}
+                  videoAnalyses: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { rank: { type: Type.NUMBER }, fileName: { type: Type.STRING }, justification: { type: Type.STRING }, summary: { type: Type.STRING }, sceneDescriptions: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { timestamp: { type: Type.STRING }, description: { type: Type.STRING }}, required: ["timestamp", "description"]}}, keyObjects: { type: Type.ARRAY, items: { type: Type.STRING }}, emotionalTone: { type: Type.ARRAY, items: { type: Type.STRING }}, audioAnalysis: { type: Type.OBJECT, nullable: true, properties: { summary: { type: Type.STRING }, keyPhrases: { type: Type.ARRAY, items: { type: Type.STRING }}, callsToAction: { type: Type.ARRAY, items: { type: Type.STRING }}}, required: ["summary", "keyPhrases", "callsToAction"]}, veoHookSuggestion: { type: Type.STRING, nullable: true }, emotionalMoments: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { timestamp: { type: Type.STRING }, emotion: { type: Type.STRING }, intensity: { type: Type.NUMBER } } } } }, required: ["rank", "fileName", "justification", "summary", "sceneDescriptions", "keyObjects", "emotionalTone"]}}
               },
               required: ["primaryVideoFileName", "bRollFileNames", "strategyJustification", "videoAnalyses"]
             }
@@ -95,18 +115,22 @@ export async function generateAdCreatives(
     avatarKey: string,
     strategy: import('../types.js').CampaignStrategy
 ): Promise<import('../types.js').AdCreative[]> {
-    const avatar = (avatars as any).default[avatarKey];
-    const copyDBData = (copyDB as any).default;
+    const avatar = (avatars as any)[avatarKey];
+    const copyDBData = (copyDB as any);
+    const winningAdsData = (winningAdsDB as any);
     const relevantHeadlines = copyDBData.headlines[avatarKey] || [];
+    const winningStructures = JSON.stringify(winningAdsData.winning_structures_2025);
 
     const masterPrompt = `You are the PTD Fitness Creative Dominator, an elite AI strategist for the Dubai & Abu Dhabi premium market.
 **MISSION:**
 Generate 10 distinct, high-converting direct-response video ad blueprints based on the provided strategy and campaign brief.
+
 **TARGET AVATAR:**
 - Name: ${avatar.name}
 - Pains: ${avatar.pain_points}
 - Desires: ${avatar.desires}
 - Psych Hook: ${(avatar as any).psych_hook}
+
 **CAMPAIGN BRIEF:**
 - Product: ${brief.productName}
 - Offer: ${brief.offer}
@@ -114,26 +138,30 @@ Generate 10 distinct, high-converting direct-response video ad blueprints based 
 - Tone: ${brief.tone}
 - Platform: ${brief.platform}
 - Call to Action: ${brief.cta}
-**STRATEGIC ANALYSIS OF PROVIDED VIDEOS:**
-- Primary Video for Audio/Narrative: ${strategy.primaryVideoFileName}
-- Available B-Roll Videos: ${strategy.bRollFileNames?.join(', ') || 'None'}
-- Winning Strategy: ${strategy.strategyJustification}
-- Key Angles to Leverage: ${(strategy as any).keyAngles?.join(', ') || 'N/A'}
-- Risks to Avoid: ${(strategy as any).risksToAvoid?.join(', ') || 'N/A'}
+
+**WINNING AD STRUCTURES (2025):**
+Use these proven structures as templates for your blueprints:
+${winningStructures}
+
+**STRATEGIC ANALYSIS:**
+- Primary Video: ${strategy.primaryVideoFileName}
+- B-Roll: ${strategy.bRollFileNames?.join(', ') || 'None'}
+- Strategy: ${strategy.strategyJustification}
+
 **INSTRUCTIONS:**
-1.  **Create 10 variations.** Each must be unique.
-2.  **Use the Provided Assets:** The \`editPlan\` for each creative MUST use file names from the "Primary Video" and "B-Roll Videos" listed above.
-3.  **Adhere to the Schema:** The final output MUST be a valid JSON array matching the provided schema. Do not include any other text or explanations.
-4.  **Use Proven Headlines:** Draw inspiration from these proven headlines for this avatar: ${relevantHeadlines.join('; ')}
-5.  **Be Specific:** The 'visual' and 'edit' descriptions in the edit plan should be concise and actionable for a video editor.
-6.  **Overlay Text:** Create compelling, short overlay text. Use 'N/A' if no text is needed for a scene.`;
+1.  **Create 10 variations.** Each must be unique and follow a specific "Winning Structure" (e.g., Pattern Interrupt, Us vs Them).
+2.  **Use the Provided Assets:** The \`editPlan\` MUST use file names from the "Primary Video" and "B-Roll Videos".
+3.  **Adhere to the Schema:** The final output MUST be a valid JSON array.
+4.  **Use Proven Headlines:** Draw inspiration from: ${relevantHeadlines.join('; ')}
+5.  **Neuro-Linguistic Programming:** Use sensory language (See, Feel, Hear) in the 'body' and 'overlayText'.
+6.  **Overlay Text:** Create compelling, short overlay text. Use 'N/A' if no text is needed.`;
 
     const response = await getAI().models.generateContent({
         model: adGenerationModel,
         contents: [{ parts: [{ text: masterPrompt }] }],
         config: {
             responseMimeType: "application/json",
-            maxOutputTokens: 32768,
+            maxOutputTokens: 8192,
             responseSchema: {
                 type: Type.ARRAY,
                 items: {
@@ -174,7 +202,8 @@ export async function rankCreatives(
     avatarKey: string,
     creatives: import('../types.js').AdCreative[]
 ): Promise<import('../types.js').CreativeRanking[]> {
-    const avatar = (avatars as any).default[avatarKey];
+    const avatar = (avatars as any)[avatarKey];
+    const benchmarks = (winningAdsDB as any).metrics_benchmarks;
 
     const creativesString = creatives.map((c, i) => `
 --- CREATIVE ${i} ---
@@ -189,6 +218,8 @@ CTA: ${c.cta}
 **CONTEXT:**
 - Target Avatar: ${avatar.name} (Pains: ${avatar.pain_points}, Desires: ${avatar.desires})
 - Campaign Goal: Drive leads for "${brief.productName}" with the offer "${brief.offer}".
+- Benchmarks: Thumbstop Ratio ${benchmarks.thumbstop_ratio}, CTR ${benchmarks.ctr_link}.
+
 **CREATIVES TO RANK:**
 ${creativesString}
 **INSTRUCTIONS:**

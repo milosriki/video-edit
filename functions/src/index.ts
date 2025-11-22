@@ -21,7 +21,7 @@ import {
   CampaignBrief,
   getAvatars
 } from './services/geminiService.js';
-import * as avatars from './ai/knowledge/avatars.json' with { type: 'json' };
+import avatars from './ai/knowledge/avatars.js';
 
 // Initialize Firebase Admin SDK
 // Using the modular import 'initializeApp' function directly
@@ -31,7 +31,7 @@ initializeApp();
 const db = getFirestore();
 
 // Initialize the Express app
-const app = express();
+export const app = express();
 app.use(cors({ origin: true }));
 app.use(express.json({ limit: '50mb' }) as any); // Type assertion for express.json middleware
 
@@ -75,7 +75,7 @@ app.post('/creatives', async (req, res) => {
       return res.status(400).json({ error: 'Invalid request: "brief", "avatarKey", and "strategy" are required.' });
     }
     // Check if the avatarKey exists in your avatars data
-    if (!Object.keys((avatars as any).default).includes(avatarKey)) {
+    if (!Object.keys(avatars).includes(avatarKey)) {
         return res.status(400).json({ error: `Invalid avatarKey specified: ${avatarKey}` });
     }
 
@@ -292,8 +292,8 @@ app.post('/events', async (req, res) => {
 export const api = onRequest(
   { 
     secrets: [geminiApiKey],
-    memory: '256MiB',
-    timeoutSeconds: 540
+    memory: '2GiB',
+    timeoutSeconds: 3600
   }, 
   app
 );

@@ -1,4 +1,4 @@
-{
+export default {
   "headlines": {
     "dubai_men_40": [
       "Are you a Dubai Executive Losing Your Edge?",
@@ -40,4 +40,4 @@
     "I need something that fits my chaotic schedule.",
     "I want to feel strong again, not just skinny."
   ]
-}
+};

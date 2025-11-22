@@ -1,4 +1,4 @@
-{
+export default {
   "dubai_men_40": {
     "name": "DIFC Daniel",
     "pain_points": "Stress belly, low energy, time-poor, losing competitive edge against younger colleagues.",
@@ -29,4 +29,4 @@
     "desires": "To train pain-free, to build functional strength that protects the back, to feel robust and capable again.",
     "psych_hook": "Rebuilding the foundation and bulletproofing the body."
   }
-}
+};

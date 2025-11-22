@@ -217,6 +217,19 @@ export const processVideoWithAdvancedEdits = async (
     const videoData = await fileToUint8Array(sourceVideo);
     await ffmpegInstance.writeFile('input.mp4', videoData);
 
+    // Probe for duration
+    let duration = 0;
+    const logCallback = ({ message }: { message: string }) => {
+        const match = message.match(/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+        if (match) {
+            const [_, h, m, s] = match;
+            duration = parseFloat(h) * 3600 + parseFloat(m) * 60 + parseFloat(s);
+        }
+    };
+    ffmpegInstance.on('log', logCallback);
+    await ffmpegInstance.exec(['-i', 'input.mp4']);
+    ffmpegInstance.off('log', logCallback); // Clean up listener
+
     const command: string[] = [];
     const trimEdit = edits.find(e => e.type === 'trim');
     
@@ -257,6 +270,68 @@ export const processVideoWithAdvancedEdits = async (
                     filterComplexParts.push(`${lastVideoStream}${filterName}${newVideoStream}`);
                     lastVideoStream = newVideoStream;
                 }
+                break;
+            }
+            case 'color': {
+                // eq filter: brightness (default 0), contrast (default 1), saturation (default 1)
+                const eqFilter = `eq=brightness=${edit.brightness}:contrast=${edit.contrast}:saturation=${edit.saturation}`;
+                filterComplexParts.push(`${lastVideoStream}${eqFilter}${newVideoStream}`);
+                lastVideoStream = newVideoStream;
+                break;
+            }
+            case 'volume': {
+                filterComplexParts.push(`${lastAudioStream}volume=${edit.level}${newAudioStream}`);
+                lastAudioStream = newAudioStream;
+                break;
+            }
+            case 'fade': {
+                const fadeDuration = edit.duration;
+                let videoFilters = [];
+                let audioFilters = [];
+
+                if (edit.typeIn) {
+                    videoFilters.push(`fade=t=in:st=0:d=${fadeDuration}`);
+                    audioFilters.push(`afade=t=in:st=0:d=${fadeDuration}`);
+                }
+                if (edit.typeOut && duration > 0) {
+                    const startTime = Math.max(0, duration - fadeDuration);
+                    videoFilters.push(`fade=t=out:st=${startTime}:d=${fadeDuration}`);
+                    audioFilters.push(`afade=t=out:st=${startTime}:d=${fadeDuration}`);
+                }
+
+                if (videoFilters.length > 0) {
+                    filterComplexParts.push(`${lastVideoStream}${videoFilters.join(',')}${newVideoStream}`);
+                    lastVideoStream = newVideoStream;
+                }
+                if (audioFilters.length > 0) {
+                    filterComplexParts.push(`${lastAudioStream}${audioFilters.join(',')}${newAudioStream}`);
+                    lastAudioStream = newAudioStream;
+                }
+                break;
+            }
+            case 'crop': {
+                let cropFilter = '';
+                // Assuming landscape input for simplicity. 
+                // In a real app, we'd check metadata dimensions.
+                switch (edit.ratio) {
+                    case '9:16': cropFilter = 'crop=ih*9/16:ih:(iw-ow)/2:0'; break;
+                    case '1:1': cropFilter = 'crop=ih:ih:(iw-ow)/2:0'; break;
+                    case '4:5': cropFilter = 'crop=ih*4/5:ih:(iw-ow)/2:0'; break;
+                    case '16:9': default: cropFilter = 'crop=iw:iw*9/16:0:(ih-oh)/2'; break; // No-op if already 16:9 usually
+                }
+                if (cropFilter) {
+                    filterComplexParts.push(`${lastVideoStream}${cropFilter}${newVideoStream}`);
+                    lastVideoStream = newVideoStream;
+                }
+                break;
+            }
+            case 'subtitles': {
+                // Simulated subtitles - burning text at the bottom
+                // In production, this would parse an SRT file or transcription object
+                const fontPath = isFontLoaded ? `/fonts/Roboto-Regular.ttf` : 'sans-serif';
+                const subtitleFilter = `drawtext=fontfile='${fontPath}':text='${edit.text}':fontcolor=white:fontsize=24:box=1:boxcolor=black@0.6:x=(w-text_w)/2:y=h-50`;
+                filterComplexParts.push(`${lastVideoStream}${subtitleFilter}${newVideoStream}`);
+                lastVideoStream = newVideoStream;
                 break;
             }
             case 'speed': {

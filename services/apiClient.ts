@@ -1,9 +1,8 @@
 // services/apiClient.ts
 import type { CampaignBrief, CampaignStrategy, AdCreative, Avatar, CreativeRanking } from '../types';
 
-const API_BASE_URL = import.meta.env.DEV 
-  ? '/api' // Local dev server proxy
-  : 'https://us-central1-ptd-fitness-demo.cloudfunctions.net/api'; // Production Cloud Functions
+// Updated to point to the new Cloud Run backend
+const API_BASE_URL = 'https://ptd-fitness-backend-489769736562.us-central1.run.app';
 
 async function handleResponse<T>(response: Response): Promise<T> {
     const contentType = response.headers.get('content-type') || '';

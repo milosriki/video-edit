@@ -78,6 +78,11 @@ export type AdvancedEdit = { id: string } & (
   | { type: 'image'; file: File; position: 'top_left' | 'top_right' | 'bottom_left' | 'bottom_right'; scale: number; opacity: number; }
   | { type: 'speed'; factor: number }
   | { type: 'filter'; name: 'grayscale' | 'sepia' | 'negate' | 'vignette' }
+  | { type: 'color'; brightness: number; contrast: number; saturation: number; }
+  | { type: 'volume'; level: number; }
+  | { type: 'fade'; typeIn: boolean; typeOut: boolean; duration: number; }
+  | { type: 'crop'; ratio: '16:9' | '9:16' | '1:1' | '4:5'; }
+  | { type: 'subtitles'; text: string; } // Simplified for now
   | { type: 'mute' }
 );
 

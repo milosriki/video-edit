@@ -4,6 +4,7 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { getFunctions } from 'firebase/functions';
 import { getAnalytics, isSupported } from 'firebase/analytics';
+import { getPerformance } from 'firebase/performance';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -31,6 +32,12 @@ try {
   db = getFirestore(app);
   storage = getStorage(app);
   functions = getFunctions(app);
+  
+  // Initialize Performance Monitoring
+  if (typeof window !== 'undefined') {
+    const perf = getPerformance(app);
+    console.log('🚀 Performance Monitoring initialized');
+  }
   
   console.log('🔥 Firebase initialized successfully!');
   console.log('📦 Project ID:', firebaseConfig.projectId);

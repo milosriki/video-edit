@@ -3,6 +3,7 @@ import { CreatorDashboard } from './components/CreatorDashboard';
 import { PerformanceDashboard } from './components/PerformanceDashboard';
 import { SparklesIcon } from './components/icons';
 import { BarChartIcon } from './components/icons';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'creator' | 'analyst'>('creator');
@@ -37,8 +38,10 @@ export default function App() {
         </div>
 
         <div className="bg-gray-800/50 rounded-2xl shadow-2xl p-0 sm:p-0 backdrop-blur-sm border border-gray-700/50 min-h-[60vh]">
-          {activeTab === 'creator' && <CreatorDashboard />}
-          {activeTab === 'analyst' && <div className="p-6 sm:p-8"><PerformanceDashboard /></div>}
+          <ErrorBoundary>
+            {activeTab === 'creator' && <CreatorDashboard />}
+            {activeTab === 'analyst' && <div className="p-6 sm:p-8"><PerformanceDashboard /></div>}
+          </ErrorBoundary>
         </div>
       </main>
       <footer className="text-center mt-8 text-gray-500 text-sm">
