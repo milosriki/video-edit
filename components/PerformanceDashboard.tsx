@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { BarChartIcon } from './icons';
+import { titanClient } from '../frontend/src/api/titan_client';
 
 const qc = new QueryClient();
 
@@ -90,12 +91,12 @@ function Chart({ data, label }: { data: TimeseriesPoint[]; label: string }) {
         <svg width="100%" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={label}>
           <defs>
             <linearGradient id="fill" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="#818cf8" stopOpacity="0.35"/>
-              <stop offset="100%" stopColor="#818cf8" stopOpacity="0"/>
+              <stop offset="0%" stopColor="#818cf8" stopOpacity="0.35" />
+              <stop offset="100%" stopColor="#818cf8" stopOpacity="0" />
             </linearGradient>
           </defs>
-          <path d={path} fill="none" stroke="#818cf8" strokeWidth="2" vectorEffect="non-scaling-stroke"/>
-          <path d={`${path} L ${scaleX(maxX)} ${height - pad} L ${scaleX(minX)} ${height - pad} Z`} fill="url(#fill)" opacity="0.5"/>
+          <path d={path} fill="none" stroke="#818cf8" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+          <path d={`${path} L ${scaleX(maxX)} ${height - pad} L ${scaleX(minX)} ${height - pad} Z`} fill="url(#fill)" opacity="0.5" />
         </svg>
       )}
     </div>
@@ -112,7 +113,11 @@ function InnerPerformanceDashboard() {
 
   const overviewQ = useQuery({
     queryKey: ['overview', from, to],
-    queryFn: () => fetchJSON<Overview>(`${API_BASE}/overview?from=${from}&to=${to}`)
+    queryFn: async () => {
+      // Use the new Titan Client
+      const metrics = await titanClient.getDashboardMetrics(days);
+      return metrics; // metrics.totals matches the Overview type
+    }
   });
 
   const creativesQ = useQuery({
@@ -160,11 +165,11 @@ function InnerPerformanceDashboard() {
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
         <KpiCard label="Impressions" value={totals ? number(totals.impressions) : '—'} />
-        <KpiCard label="Clicks" value={totals ? number(totals.clicks) : '—'} help={totals ? `CTR ${pct(totals.ctr)}` : undefined}/>
-        <KpiCard label="Conversions" value={totals ? number(totals.conversions) : '—'} help={totals ? `CVR ${pct(totals.cvr)}` : undefined}/>
+        <KpiCard label="Clicks" value={totals ? number(totals.clicks) : '—'} help={totals ? `CTR ${pct(totals.ctr)}` : undefined} />
+        <KpiCard label="Conversions" value={totals ? number(totals.conversions) : '—'} help={totals ? `CVR ${pct(totals.cvr)}` : undefined} />
         <KpiCard label="Spend" value={totals ? money(totals.spend) : '—'} />
         <KpiCard label="Revenue" value={totals ? money(totals.revenue) : '—'} />
-        <KpiCard label="ROAS" value={totals ? pct(totals.roas) : '—'} help={totals ? `CPA ${money(totals.cpa)}` : undefined}/>
+        <KpiCard label="ROAS" value={totals ? pct(totals.roas) : '—'} help={totals ? `CPA ${money(totals.cpa)}` : undefined} />
       </div>
       <div className="bg-gray-800/60 border border-gray-700/60 rounded-lg overflow-hidden">
         <div className="px-3 py-2 flex items-center justify-between">

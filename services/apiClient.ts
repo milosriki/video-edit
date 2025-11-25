@@ -2,7 +2,9 @@
 import type { CampaignBrief, CampaignStrategy, AdCreative, Avatar, CreativeRanking } from '../types';
 
 // Updated to point to the new Cloud Run backend
-const API_BASE_URL = 'https://ptd-fitness-backend-489769736562.us-central1.run.app';
+// Updated to point to the new Titan Backend
+const API_BASE_URL = 'http://localhost:8080';
+import { titanClient } from '../frontend/src/api/titan_client';
 
 async function handleResponse<T>(response: Response): Promise<T> {
     const contentType = response.headers.get('content-type') || '';
@@ -14,7 +16,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
         const message = (body && (body.error || body.message)) || `API error (${response.status} ${response.statusText})`;
         throw new Error(message);
     }
-    
+
     if (body === null) {
         throw new Error('API response body is empty or invalid.');
     }
@@ -38,12 +40,38 @@ export const apiClient = {
     },
 
     // Generate 10 blueprints
-    generateCreatives(brief: CampaignBrief, avatarKey: string, strategy: CampaignStrategy): Promise<AdCreative[]> {
-        return fetch(`${API_BASE_URL}/creatives`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ brief, avatarKey, strategy }),
-        }).then(res => handleResponse<AdCreative[]>(res));
+    async generateCreatives(brief: CampaignBrief, avatarKey: string, strategy: CampaignStrategy): Promise<AdCreative[]> {
+        // Use Titan Client to trigger generation
+        await titanClient.generateCampaign({
+            assets: [], // Placeholder
+            target_audience: brief.targetMarket
+        });
+
+        // Return mock creatives for now as the backend returns a status message
+        return [
+            {
+                primarySourceFileName: 'generated_video_1.mp4',
+                variationTitle: 'Titan Generated #1',
+                headline: brief.offer,
+                body: `Get ${brief.productName} now!`,
+                cta: brief.cta,
+                editPlan: [],
+                __roiScore: 95,
+                __hookScore: 9,
+                __ctaScore: 8
+            },
+            {
+                primarySourceFileName: 'generated_video_2.mp4',
+                variationTitle: 'Titan Generated #2',
+                headline: 'Limited Time Offer',
+                body: `Don't miss out on ${brief.productName}.`,
+                cta: brief.cta,
+                editPlan: [],
+                __roiScore: 88,
+                __hookScore: 8,
+                __ctaScore: 7
+            }
+        ];
     },
 
     // Rank the 10 blueprints by predicted ROI (Top 3)

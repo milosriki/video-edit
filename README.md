@@ -8,6 +8,12 @@ This is an AI-powered video advertising platform for PTD Fitness, deployed on Fi
 
 View your app in AI Studio: https://ai.studio/apps/drive/1Nm2qVbh_UivmW6yOFPYo6X9k0CEChDV9
 
+## 🚀 How to start the Titan Engine (New Backend)
+
+```bash
+uvicorn backend_core.main:app --reload
+```
+
 ## Architecture
 
 - **Frontend**: React + TypeScript + Vite (deployed to Firebase Hosting)
