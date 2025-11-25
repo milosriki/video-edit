@@ -9,11 +9,13 @@ class QualityScore(BaseModel):
     decision: str = Field(..., description="APPROVE or REJECT")
     reasoning: str = Field(..., description="Detailed reasoning for the score")
 
+from ..config import GEMINI_MODEL_ID, API_VERSION
+
 class QualityJudge:
     def __init__(self):
         # Initialize Gemini 3 Native SDK
-        self.client = genai.Client(http_options={'api_version': 'v1alpha'})
-        self.model_id = "gemini-1.5-pro-002"
+        self.client = genai.Client(http_options={'api_version': API_VERSION})
+        self.model_id = GEMINI_MODEL_ID
 
     def evaluate_video(self, new_video_uri: str, reference_video_uri: str, persona: str = "General Audience") -> QualityScore:
         """

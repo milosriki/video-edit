@@ -12,14 +12,15 @@ class VideoAnalysis(BaseModel):
     visual_elements: List[str] = Field(..., description="List of key visual elements identified")
     reasoning: str = Field(..., description="Explanation for why the hook style was identified as such")
 
+from .config import GEMINI_MODEL_ID, API_VERSION
+
 class DirectorAgent:
     def __init__(self):
         # Initialize Gemini 3 Native SDK Client
         # API Key should be in GOOGLE_API_KEY environment variable
-        # Using v1alpha as requested for latest features or standard
-        self.client = genai.Client(http_options={'api_version': 'v1alpha'})
-        # Using a capable model. 'gemini-1.5-pro-002' is a strong default for video analysis.
-        self.model_id = "gemini-1.5-pro-002" 
+        self.client = genai.Client(http_options={'api_version': API_VERSION})
+        # Using the centralized model ID (Gemini 3 / 1.5 Pro)
+        self.model_id = GEMINI_MODEL_ID 
 
     def analyze_winning_pattern(self, video_uri: str) -> VideoAnalysis:
         prompt = """

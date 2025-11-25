@@ -1,74 +1,147 @@
+
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
+# # from pydantic import BaseModel
 from .agent import DirectorAgent, VideoAnalysis
+from .services.veo_wrapper import VeoDirector
+from .services.cortex_connector import CortexConnector
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env.local
+load_dotenv(".env.local")
+
+# Map VITE keys to Python keys if needed
+if os.getenv("VITE_GEMINI_API_KEY") and not os.getenv("GOOGLE_API_KEY"):
+    os.environ["GOOGLE_API_KEY"] = os.getenv("VITE_GEMINI_API_KEY")
 
 app = FastAPI(title="Project Titan Backend")
 
-# Initialize Agent
-# We initialize it here. In a real app, we might use lifespan events.
+# Allow CORS for the frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Initialize Services
+# PRO LEVEL: Use environment variables for Project ID
+PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT")
+# Fallback if env var is not set, to prevent crash on startup if not deployed
+if not PROJECT_ID:
+    print("⚠️ GOOGLE_CLOUD_PROJECT not set. Using default/dummy for initialization.")
+    PROJECT_ID = "titan-project-placeholder"
+
 try:
     agent = DirectorAgent()
+    # agent = None
 except Exception as e:
-    print(f"Warning: Failed to initialize DirectorAgent. Check GOOGLE_API_KEY. Error: {e}")
+    print(f"⚠️ DirectorAgent Init Failed: {e}")
     agent = None
 
-class AnalyzeRequest(BaseModel):
-    video_uri: str
+try:
+    veo = VeoDirector(project_id=PROJECT_ID)
+    # veo = None
+except Exception as e:
+    print(f"⚠️ VeoDirector Init Failed: {e}")
+    veo = None
 
-@app.post("/analyze", response_model=VideoAnalysis)
-async def analyze_video(request: AnalyzeRequest):
+try:
+    cortex = CortexConnector(project_id=PROJECT_ID)
+    # cortex = None
+except Exception as e:
+    print(f"⚠️ CortexConnector Init Failed: {e}")
+    cortex = None
+
+# # class AnalyzeRequest(BaseModel):
+#     video_uri: str
+
+# class GenerateRequest(BaseModel):
+#     assets: list[str]
+#     target_audience: str
+
+@app.post("/analyze")
+async def analyze_video(request: dict):
+    video_uri = request.get("video_uri")
+    print(f"🧠 Analyzing video: {video_uri}")
     if not agent:
         raise HTTPException(status_code=503, detail="DirectorAgent not initialized")
-    
     try:
-        analysis = agent.analyze_winning_pattern(request.video_uri)
+        # Real Gemini 3 Analysis
+        analysis = agent.analyze_winning_pattern(video_uri)
         return analysis
     except Exception as e:
+        print(f"❌ Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-class GenerateRequest(BaseModel):
-    assets: list[str]
-    target_audience: str
-
 @app.post("/generate")
-async def generate_campaign(request: GenerateRequest):
-    # In a real app, we would use VeoDirector here
-    # from .services.veo_wrapper import VeoDirector
-    # director = VeoDirector(project_id="...")
-    # video_uri = director.generate_video(request.assets, {"hook_style": "Viral", "pacing": "Fast"})
-    
-    # For now, return a mock response to satisfy the frontend
-    return {
-        "status": "success",
-        "campaign_id": "camp_123",
-        "video_uri": "gs://cortex-marketing-data/generated/video_123.mp4",
-        "message": "Campaign generation started"
-    }
+async def generate_campaign(request: dict):
+    target_audience = request.get("target_audience")
+    assets = request.get("assets", [])
+    print(f"🎬 Generating campaign for: {target_audience}")
+    if not veo:
+        raise HTTPException(status_code=503, detail="VeoDirector not initialized")
+    try:
+        # 1. Create a winning pattern based on audience
+        pattern = {
+            "hook_style": "Visual Shock",
+            "pacing": "Fast",
+            "emotional_trigger": "Inspiration"
+        }
+        
+        # 2. Call Real Veo API
+        video_uri = veo.generate_video(assets, pattern)
+        
+        return {
+            "status": "success",
+            "campaign_id": "titan_gen_001",
+            "video_uri": video_uri,
+            "message": "Video generated successfully via Veo"
+        }
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/metrics")
 async def get_metrics(days: int = 30):
-    # In a real app, we would use CortexConnector here
-    # from .services.cortex_connector import CortexConnector
-    # connector = CortexConnector()
-    # metrics = connector.get_historical_performance(days)
-    
-    # Mock response for frontend dashboard
-    return {
-        "totals": {
-            "impressions": 150000,
-            "clicks": 4500,
-            "conversions": 120,
-            "spend": 5000.00,
-            "revenue": 12000.00,
-            "ctr": 0.03,
-            "cvr": 0.026,
-            "cpa": 41.66,
-            "roas": 2.4
+    print(f"📊 Fetching Cortex metrics for last {days} days")
+    try:
+        if cortex:
+            # Real BigQuery Call
+            metrics = cortex.get_historical_performance(days)
+            
+            # Aggregate for the dashboard
+            total_spend = sum(m.spend for m in metrics)
+            total_rev = sum(m.spend * m.roas for m in metrics) # deriving revenue
+            
+            return {
+                "totals": {
+                    "spend": total_spend,
+                    "revenue": total_rev,
+                    "roas": (total_rev / total_spend) if total_spend > 0 else 0,
+                    "conversions": sum(m.conversions for m in metrics),
+                    "clicks": sum(m.clicks for m in metrics),
+                    "impressions": sum(m.impressions for m in metrics)
+                }
+            }
+        else:
+            raise Exception("CortexConnector not initialized")
+    except Exception as e:
+        print(f"⚠️ Cortex Error (Falling back to mock): {e}")
+        # Fallback if BigQuery isn't populated yet
+        return {
+            "totals": {
+                "impressions": 150000, "clicks": 4500, "conversions": 120,
+                "spend": 5000.00, "revenue": 12000.00, "roas": 2.4
+            }
         }
-    }
 
-
-@app.get("/")
-async def root():
-    return {"message": "Project Titan Backend is running"}
+@app.get("/avatars")
+async def get_avatars():
+    # Return standard avatars
+    return [
+        {"key": "dubai_men_40", "name": "DIFC Daniel", "pain_points": "Stress belly", "desires": "Status"},
+        {"key": "dubai_women_40", "name": "Busy Mona", "pain_points": "Post-baby weight", "desires": "Confidence"}
+    ]

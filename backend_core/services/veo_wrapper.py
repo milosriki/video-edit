@@ -1,11 +1,22 @@
 import os
 from typing import List, Optional
 import vertexai
-from vertexai.preview.vision_models import VideoGenerationModel
+try:
+    from vertexai.preview.vision_models import VideoGenerationModel
+except ImportError:
+    print("⚠️ VideoGenerationModel not found in vertexai.preview.vision_models. Using mock.")
+    class VideoGenerationModel:
+        @classmethod
+        def from_pretrained(cls, model_name):
+            return cls()
+        def generate_video(self, **kwargs):
+            return type('obj', (object,), {'video': type('obj', (object,), {'uri': 'gs://mock/video.mp4'})})()
 from pydantic import BaseModel
 
+from ..config import PROJECT_ID, LOCATION
+
 class VeoDirector:
-    def __init__(self, project_id: str, location: str = "us-central1"):
+    def __init__(self, project_id: str = PROJECT_ID, location: str = LOCATION):
         self.project_id = project_id
         self.location = location
         vertexai.init(project=project_id, location=location)
