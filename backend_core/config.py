@@ -4,12 +4,17 @@ from dotenv import load_dotenv
 load_dotenv(".env.local")
 
 # 🧠 AI CONFIGURATION
-# Using the latest Gemini models via the Google Gen AI SDK
-# "Gemini 3" refers to the latest generation of multimodal models
+# "Gemini 3" Era Configuration (Next Gen Models)
 
-# Primary Model for Logic, Analysis, and Judging
-# Options: "gemini-1.5-pro-002" (Best Quality), "gemini-2.0-flash-exp" (Fastest/Newest)
+# STRATEGY & REASONING (Pro Level)
+# Used for: Director Agent, Strategy Generation, Deep Analysis
+# Current Best: Gemini 1.5 Pro (002)
 GEMINI_MODEL_ID = os.getenv("GEMINI_MODEL_ID", "gemini-1.5-pro-002")
+
+# SPEED & INTERACTION (Flash Level)
+# Used for: Ad Chat, Quick Edits, Repetitive Tasks
+# Current Best: Gemini 2.0 Flash (Experimental)
+GEMINI_FLASH_MODEL_ID = os.getenv("GEMINI_FLASH_MODEL_ID", "gemini-2.0-flash-exp")
 
 # API Configuration
 API_VERSION = "v1alpha" # Required for some experimental features

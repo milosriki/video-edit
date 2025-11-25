@@ -5,6 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from .agent import DirectorAgent, VideoAnalysis
 from .services.veo_wrapper import VeoDirector
 from .services.cortex_connector import CortexConnector
+from .services.video_intelligence import VideoIntelligenceService
+from .services.ad_chat import AdChatAgent
 import os
 from dotenv import load_dotenv
 
@@ -36,24 +38,33 @@ if not PROJECT_ID:
 
 try:
     agent = DirectorAgent()
-    # agent = None
 except Exception as e:
     print(f"⚠️ DirectorAgent Init Failed: {e}")
     agent = None
 
 try:
     veo = VeoDirector(project_id=PROJECT_ID)
-    # veo = None
 except Exception as e:
     print(f"⚠️ VeoDirector Init Failed: {e}")
     veo = None
 
 try:
     cortex = CortexConnector(project_id=PROJECT_ID)
-    # cortex = None
 except Exception as e:
     print(f"⚠️ CortexConnector Init Failed: {e}")
     cortex = None
+
+try:
+    video_intel = VideoIntelligenceService()
+except Exception as e:
+    print(f"⚠️ VideoIntelligenceService Init Failed: {e}")
+    video_intel = None
+
+try:
+    ad_chat = AdChatAgent()
+except Exception as e:
+    print(f"⚠️ AdChatAgent Init Failed: {e}")
+    ad_chat = None
 
 # # class AnalyzeRequest(BaseModel):
 #     video_uri: str
@@ -75,6 +86,39 @@ async def analyze_video(request: dict):
     except Exception as e:
         print(f"❌ Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/analyze/faces")
+async def analyze_faces(request: dict):
+    video_uri = request.get("video_uri")
+    if not video_intel:
+        raise HTTPException(status_code=503, detail="VideoIntelligenceService not initialized")
+    return video_intel.analyze_faces(video_uri)
+
+@app.post("/analyze/transcription")
+async def analyze_transcription(request: dict):
+    video_uri = request.get("video_uri")
+    if not video_intel:
+        raise HTTPException(status_code=503, detail="VideoIntelligenceService not initialized")
+    return video_intel.transcribe_video(video_uri)
+
+@app.post("/analyze/labels")
+async def analyze_labels(request: dict):
+    video_uri = request.get("video_uri")
+    if not video_intel:
+        raise HTTPException(status_code=503, detail="VideoIntelligenceService not initialized")
+    return video_intel.detect_labels(video_uri)
+
+@app.post("/chat/ad")
+async def chat_with_ad(request: dict):
+    video_uri = request.get("video_uri")
+    message = request.get("message")
+    context = request.get("context", {})
+    
+    if not ad_chat:
+        raise HTTPException(status_code=503, detail="AdChatAgent not initialized")
+        
+    print(f"💬 Chatting with ad {video_uri}: {message}")
+    return ad_chat.chat_with_ad(video_uri, message, context)
 
 @app.post("/generate")
 async def generate_campaign(request: dict):
