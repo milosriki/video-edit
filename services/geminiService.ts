@@ -31,14 +31,14 @@ const getAI = () => {
   return aiInstance;
 };
 
-const fastModel = 'gemini-2.5-flash';
-const chatModel = 'gemini-2.5-flash';
+const fastModel = 'gemini-3-flash';
+const chatModel = 'gemini-3-flash';
 const imageGenModel = 'imagen-4.0-generate-001';
-const imageEditModel = 'gemini-2.5-flash-image';
-const ttsModel = 'gemini-2.5-flash-preview-tts';
-const liveModel = 'gemini-2.5-flash-native-audio-preview-09-2025';
+const imageEditModel = 'gemini-3-pro';
+const ttsModel = 'gemini-3-pro';
+const liveModel = 'gemini-3-pro';
 const veoModel = 'veo-3.1-fast-generate-preview';
-const proModel = 'gemini-2.5-pro';
+const proModel = 'gemini-3-pro';
 
 // @ts-ignore
 function readGenAIText(resp: any): string {

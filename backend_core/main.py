@@ -7,6 +7,8 @@ from .services.veo_wrapper import VeoDirector
 from .services.cortex_connector import CortexConnector
 from .services.video_intelligence import VideoIntelligenceService
 from .services.ad_chat import AdChatAgent
+from .services.supabase_connector import supabase
+from .engines.ensemble import EnsemblePredictor
 import os
 from dotenv import load_dotenv
 
@@ -66,6 +68,16 @@ except Exception as e:
     print(f"⚠️ AdChatAgent Init Failed: {e}")
     ad_chat = None
 
+try:
+    predictor = EnsemblePredictor()
+except Exception as e:
+    print(f"⚠️ EnsemblePredictor Init Failed: {e}")
+    predictor = None
+
+
+if not supabase:
+    print("⚠️ Supabase not connected. Some features may be limited.")
+
 # # class AnalyzeRequest(BaseModel):
 #     video_uri: str
 
@@ -119,6 +131,14 @@ async def chat_with_ad(request: dict):
         
     print(f"💬 Chatting with ad {video_uri}: {message}")
     return ad_chat.chat_with_ad(video_uri, message, context)
+
+@app.post("/predict")
+async def predict_virality(request: dict):
+    features = request.get("features", {})
+    print(f"🔮 Predicting virality for features: {features}")
+    if not predictor:
+        raise HTTPException(status_code=503, detail="EnsemblePredictor not initialized")
+    return await predictor.predict_virality(features)
 
 @app.post("/generate")
 async def generate_campaign(request: dict):

@@ -4,3 +4,9 @@ google-cloud-aiplatform
 google-cloud-bigquery
 pydantic
 google-genai
+python-dotenv
+google-cloud-videointelligence
+google-cloud-speech
+supabase
+anthropic
+openai

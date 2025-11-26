@@ -8,3 +8,6 @@ pydantic
 google-genai
 python-multipart
 python-dotenv
+requests
+google-auth
+supabase

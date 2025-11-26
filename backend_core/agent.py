@@ -1,3 +1,4 @@
+from __future__ import annotations
 from google import genai
 from google.genai import types
 from pydantic import BaseModel, Field
@@ -9,7 +10,7 @@ class VideoAnalysis(BaseModel):
     hook_style: str = Field(..., description="The style of the hook used in the video (e.g., Visual Shock, Question, Story)")
     pacing: str = Field(..., description="The pacing of the video (Fast/Slow)")
     emotional_trigger: str = Field(..., description="The primary emotional trigger (e.g., Curiosity, Fear, Joy)")
-    visual_elements: List[str] = Field(..., description="List of key visual elements identified")
+    visual_elements: list[str] = Field(..., description="List of key visual elements identified")
     reasoning: str = Field(..., description="Explanation for why the hook style was identified as such")
 
 from .config import GEMINI_MODEL_ID, API_VERSION
