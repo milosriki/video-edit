@@ -156,9 +156,9 @@ const VSLProEditor: React.FC = () => {
     }
 
     const trimEdit = edits.find(e => e.type === 'trim');
-    if (trimEdit && trimEdit.type === 'trim') {
-      const start = parseFloat(trimEdit.start);
-      const end = parseFloat(trimEdit.end);
+    if (trimEdit) {
+      const start = parseFloat((trimEdit as Extract<AdvancedEdit, { type: 'trim' }>).start);
+      const end = parseFloat((trimEdit as Extract<AdvancedEdit, { type: 'trim' }>).end);
       if (isNaN(start) || isNaN(end) || start < 0 || end <= 0) {
         setError("Trim 'start' and 'end' times must be valid, positive numbers.");
         return;
@@ -240,7 +240,19 @@ const VSLProEditor: React.FC = () => {
       case 'speed':
         return (
           <div className="flex items-center gap-2">
-            <input type="range" min="0.25" max="4" step="0.25" value={edit.factor} onChange={e => updateEdit(edit.id, { factor: parseFloat(e.target.value) })} className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer" />
+            <input 
+              type="range" 
+              min="0.25" 
+              max="4" 
+              step="0.25" 
+              value={edit.factor} 
+              onChange={e => updateEdit(edit.id, { factor: parseFloat(e.target.value) })} 
+              className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+              aria-label="Speed factor"
+              aria-valuemin={0.25}
+              aria-valuemax={4}
+              aria-valuenow={edit.factor}
+            />
             <span className="font-mono text-sm w-12">{edit.factor.toFixed(2)}x</span>
           </div>
         );
@@ -258,17 +270,29 @@ const VSLProEditor: React.FC = () => {
           <div className="space-y-2">
             <div className="flex gap-4">
               <label className="flex items-center gap-2 text-sm text-gray-300">
-                <input type="checkbox" checked={edit.typeIn} onChange={e => updateEdit(edit.id, { typeIn: e.target.checked })} className="rounded bg-gray-700 border-gray-600 text-indigo-600" />
+                <input 
+                  type="checkbox" 
+                  checked={edit.typeIn} 
+                  onChange={e => updateEdit(edit.id, { typeIn: e.target.checked })} 
+                  className="rounded bg-gray-700 border-gray-600 text-indigo-600"
+                  aria-label="Enable fade in effect"
+                />
                 Fade In
               </label>
               <label className="flex items-center gap-2 text-sm text-gray-300">
-                <input type="checkbox" checked={edit.typeOut} onChange={e => updateEdit(edit.id, { typeOut: e.target.checked })} className="rounded bg-gray-700 border-gray-600 text-indigo-600" />
+                <input 
+                  type="checkbox" 
+                  checked={edit.typeOut} 
+                  onChange={e => updateEdit(edit.id, { typeOut: e.target.checked })} 
+                  className="rounded bg-gray-700 border-gray-600 text-indigo-600"
+                  aria-label="Enable fade out effect"
+                />
                 Fade Out
               </label>
             </div>
             <div>
               <label className="text-xs text-gray-400 flex justify-between"><span>Duration</span><span>{edit.duration.toFixed(1)}s</span></label>
-              <input type="range" min="0.5" max="5" step="0.5" value={edit.duration} onChange={e => updateEdit(edit.id, { duration: parseFloat(e.target.value) })} className="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer" />
+              <input type="range" min="0.5" max="5" step="0.5" value={edit.duration} onChange={e => updateEdit(edit.id, { duration: parseFloat(e.target.value) })} className="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer" aria-label="Fade duration" />
             </div>
           </div>
         );
