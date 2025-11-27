@@ -239,3 +239,11 @@ export const GridIcon: React.FC<{ className?: string }> = ({ className }) => (
     <rect x="3" y="14" width="7" height="7" />
   </svg>
 );
+
+export const VSLIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+    <path d="m10 8 4 3-4 3V8Z" />
+    <line x1="2" y1="20" x2="22" y2="20" />
+  </svg>
+);
