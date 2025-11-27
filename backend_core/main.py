@@ -1,7 +1,15 @@
+"""
+TITAN Backend - Multi-Agent AI Ad Intelligence System
+
+4 Core Agents:
+1. ANALYST 🔬 - Deep video intelligence
+2. ORACLE 🔮 - 8-Engine Ensemble Prediction  
+3. DIRECTOR 🎬 - Ad script generation
+4. CHAT 💬 - Proactive intelligence with memory
+"""
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-# # from pydantic import BaseModel
 from .agent import DirectorAgent, VideoAnalysis
 from .services.veo_wrapper import VeoDirector
 from .services.cortex_connector import CortexConnector
@@ -12,6 +20,15 @@ from .engines.ensemble import EnsemblePredictor
 import os
 from dotenv import load_dotenv
 
+# Import TITAN API routes
+from .api.routes import (
+    analyze_router,
+    predict_router,
+    generate_router,
+    chat_router,
+    knowledge_router
+)
+
 # Load environment variables from .env.local
 load_dotenv(".env.local")
 
@@ -19,7 +36,11 @@ load_dotenv(".env.local")
 if os.getenv("VITE_GEMINI_API_KEY") and not os.getenv("GOOGLE_API_KEY"):
     os.environ["GOOGLE_API_KEY"] = os.getenv("VITE_GEMINI_API_KEY")
 
-app = FastAPI(title="Project Titan Backend")
+app = FastAPI(
+    title="TITAN Backend",
+    description="Multi-Agent AI Ad Intelligence System",
+    version="2.0.0"
+)
 
 # Allow CORS for the frontend
 app.add_middleware(
@@ -78,12 +99,18 @@ except Exception as e:
 if not supabase:
     print("⚠️ Supabase not connected. Some features may be limited.")
 
-# # class AnalyzeRequest(BaseModel):
-#     video_uri: str
+# ==========================================
+# REGISTER TITAN API ROUTES
+# ==========================================
+app.include_router(analyze_router)
+app.include_router(predict_router)
+app.include_router(generate_router)
+app.include_router(chat_router)
+app.include_router(knowledge_router)
 
-# class GenerateRequest(BaseModel):
-#     assets: list[str]
-#     target_audience: str
+# ==========================================
+# LEGACY ENDPOINTS (kept for backward compatibility)
+# ==========================================
 
 @app.post("/analyze")
 async def analyze_video(request: dict):
@@ -207,5 +234,49 @@ async def get_avatars():
     # Return standard avatars
     return [
         {"key": "dubai_men_40", "name": "DIFC Daniel", "pain_points": "Stress belly", "desires": "Status"},
-        {"key": "dubai_women_40", "name": "Busy Mona", "pain_points": "Post-baby weight", "desires": "Confidence"}
+        {"key": "dubai_women_40", "name": "Busy Mona", "pain_points": "Post-baby weight", "desires": "Confidence"},
+        {"key": "abu_dhabi_men_40", "name": "Abu Dhabi Pro", "pain_points": "Low energy", "desires": "Performance"}
     ]
+
+
+# ==========================================
+# TITAN SYSTEM INFO
+# ==========================================
+@app.get("/")
+async def root():
+    return {
+        "name": "TITAN",
+        "description": "Multi-Agent AI Ad Intelligence System",
+        "version": "2.0.0",
+        "agents": [
+            {"name": "ANALYST", "icon": "🔬", "status": "active"},
+            {"name": "ORACLE", "icon": "🔮", "status": "active"},
+            {"name": "DIRECTOR", "icon": "🎬", "status": "active"},
+            {"name": "CHAT", "icon": "💬", "status": "active"}
+        ],
+        "endpoints": {
+            "analyze": "/api/analyze",
+            "predict": "/api/predict",
+            "generate": "/api/generate/blueprints",
+            "chat": "/api/chat",
+            "knowledge": "/api/knowledge/patterns"
+        }
+    }
+
+
+@app.get("/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "agents": {
+            "analyst": agent is not None,
+            "oracle": predictor is not None,
+            "director": veo is not None,
+            "chat": ad_chat is not None
+        },
+        "services": {
+            "supabase": supabase is not None,
+            "cortex": cortex is not None,
+            "video_intel": video_intel is not None
+        }
+    }

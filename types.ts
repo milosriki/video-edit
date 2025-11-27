@@ -28,10 +28,117 @@ export interface VideoFile {
     thumbnail: string;
     status: 'pending' | 'processing' | 'analyzed' | 'error';
     analysisResult?: VideoAnalysisResult;
+    titanAnalysis?: TitanVideoAnalysis; // TITAN deep analysis
+    titanPrediction?: TitanPrediction; // TITAN 8-engine prediction
     error?: string;
     progress?: number; // For per-file progress tracking
     loadingMessage?: string; // For per-file status messages
 }
+
+// ==========================================
+// TITAN Types
+// ==========================================
+
+export interface TitanVideoAnalysis {
+  video_id: string;
+  hook: {
+    hook_type: string;
+    hook_text?: string;
+    effectiveness_score: number;
+    reasoning: string;
+  };
+  scenes: Array<{
+    timestamp: string;
+    description: string;
+    energy_level: string;
+  }>;
+  overall_energy: string;
+  pacing: string;
+  transformation?: {
+    before_state: string;
+    after_state: string;
+    transformation_type: string;
+    believability_score: number;
+  };
+  emotional_triggers: string[];
+  visual_elements: string[];
+  has_voiceover: boolean;
+  has_music: boolean;
+  transcription?: string;
+  key_phrases: string[];
+  cta_type?: string;
+  cta_strength: number;
+  summary: string;
+  strengths: string[];
+  weaknesses: string[];
+  similar_to_winning_patterns: string[];
+}
+
+export interface TitanPrediction {
+  video_id: string;
+  final_score: number;
+  roas_prediction: {
+    predicted_roas: number;
+    confidence_lower: number;
+    confidence_upper: number;
+    confidence_level: 'low' | 'medium' | 'high';
+  };
+  engine_predictions: Array<{
+    engine_name: string;
+    score: number;
+    confidence: number;
+    reasoning: string;
+  }>;
+  hook_score: number;
+  cta_score: number;
+  engagement_score: number;
+  conversion_score: number;
+  overall_confidence: number;
+  reasoning: string;
+  compared_to_avg: number;
+  recommendations: string[];
+}
+
+export interface TitanBlueprint {
+  id: string;
+  title: string;
+  hook_text: string;
+  hook_type: string;
+  scenes: Array<{
+    scene_number: number;
+    duration_seconds: number;
+    visual_description: string;
+    audio_description: string;
+    text_overlay?: string;
+    transition?: string;
+  }>;
+  cta_text: string;
+  cta_type: string;
+  caption: string;
+  hashtags: string[];
+  target_avatar: string;
+  emotional_triggers: string[];
+  predicted_roas?: number;
+  confidence_score?: number;
+  rank?: number;
+}
+
+export interface TitanKnowledgePattern {
+  id: string;
+  pattern_type: 'hook' | 'trigger' | 'structure' | 'cta' | 'transformation';
+  pattern_value: string;
+  performance_data: {
+    avg_roas?: number;
+    effectiveness?: number;
+    best_platform?: string;
+    usage_frequency?: number;
+  };
+  source: 'historical' | 'campaign' | 'manual';
+}
+
+// ==========================================
+// Original Types (continued)
+// ==========================================
 
 export interface AudioAnalysisResult {
   summary: string;
