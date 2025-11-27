@@ -27,9 +27,22 @@ export interface VideoFile {
     id: string;
     thumbnail: string;
     status: 'pending' | 'processing' | 'analyzed' | 'error';
+    /**
+     * Legacy analysis result from original DirectorAgent
+     * @deprecated Use titanAnalysis for new TITAN-based analysis
+     */
     analysisResult?: VideoAnalysisResult;
-    titanAnalysis?: TitanVideoAnalysis; // TITAN deep analysis
-    titanPrediction?: TitanPrediction; // TITAN 8-engine prediction
+    /**
+     * TITAN deep analysis from AnalystAgent
+     * Provides comprehensive video intelligence including hook analysis,
+     * scene detection, transformation detection, and pattern matching
+     */
+    titanAnalysis?: TitanVideoAnalysis;
+    /**
+     * TITAN 8-engine ensemble prediction from OracleAgent
+     * Provides ROAS prediction with confidence intervals
+     */
+    titanPrediction?: TitanPrediction;
     error?: string;
     progress?: number; // For per-file progress tracking
     loadingMessage?: string; // For per-file status messages

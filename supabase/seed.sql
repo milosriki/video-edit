@@ -307,7 +307,7 @@ INSERT INTO ad_blueprints (id, video_id, blueprint, predicted_roas, confidence_s
             {"scene_number": 4, "duration_seconds": 6, "visual_description": "Results proof", "audio_description": "Testimonials"},
             {"scene_number": 5, "duration_seconds": 3, "visual_description": "CTA", "audio_description": "Act now"}
         ],
-        "cta_text": "Dont Fall Behind - Book Now",
+        "cta_text": "Don''t Fall Behind - Book Now",
         "cta_type": "book_call",
         "caption": "The only competition that matters is with yourself 💯",
         "hashtags": ["#executivefitness", "#dubaiexecs", "#winningmindset"],

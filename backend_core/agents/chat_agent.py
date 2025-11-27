@@ -326,12 +326,23 @@ Respond helpfully. Include suggested_actions for next steps. If you notice patte
         """Get response from Gemini"""
         
         try:
+            # Use JSON schema dict for Gemini compatibility
+            response_schema_dict = {
+                "type": "object",
+                "properties": {
+                    "response": {"type": "string"},
+                    "suggested_actions": {"type": "array", "items": {"type": "string"}},
+                    "insights": {"type": "array", "items": {"type": "object"}}
+                },
+                "required": ["response"]
+            }
+            
             response = self.client.models.generate_content(
                 model=self.model_id,
                 contents=[prompt],
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
-                    response_schema=ChatResponse
+                    response_schema=response_schema_dict
                 )
             )
             

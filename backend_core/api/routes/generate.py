@@ -120,7 +120,7 @@ async def generate_blueprints(request: GenerateBlueprintsRequest):
                     "has_music": 1,
                     "cta_strength": 7,
                     "has_cta": 1,
-                    "num_winning_patterns_matched": 1 if bp.based_on_pattern else 0
+                    "num_winning_patterns_matched": 1 if getattr(bp, 'based_on_pattern', None) else 0
                 }
                 
                 prediction = await oracle.predict(features, bp.id)
