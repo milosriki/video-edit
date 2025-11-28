@@ -1,7 +1,6 @@
-
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-# # from pydantic import BaseModel
+from datetime import datetime
 from .agent import DirectorAgent, VideoAnalysis
 from .services.veo_wrapper import VeoDirector
 from .services.cortex_connector import CortexConnector
@@ -12,7 +11,8 @@ from .engines.ensemble import EnsemblePredictor
 import os
 from dotenv import load_dotenv
 
-# Load environment variables from .env.local
+# Load environment variables from .env.local (local development)
+# In production (Vercel/Railway), env vars are set via dashboard
 load_dotenv(".env.local")
 
 # Map VITE keys to Python keys if needed
@@ -78,12 +78,48 @@ except Exception as e:
 if not supabase:
     print("⚠️ Supabase not connected. Some features may be limited.")
 
-# # class AnalyzeRequest(BaseModel):
-#     video_uri: str
+# =========================================
+# HEALTH CHECK & STATUS ENDPOINTS
+# =========================================
 
-# class GenerateRequest(BaseModel):
-#     assets: list[str]
-#     target_audience: str
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for monitoring and deployment verification."""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "version": "1.0.0",
+        "services": {
+            "director_agent": agent is not None,
+            "veo_director": veo is not None,
+            "cortex_connector": cortex is not None,
+            "video_intelligence": video_intel is not None,
+            "ad_chat": ad_chat is not None,
+            "ensemble_predictor": predictor is not None,
+            "supabase": supabase is not None
+        }
+    }
+
+@app.get("/")
+async def root():
+    """Root endpoint with API information."""
+    return {
+        "name": "Project Titan API",
+        "version": "1.0.0",
+        "description": "AI-powered video ad analysis and generation platform",
+        "endpoints": {
+            "health": "/health",
+            "analyze": "POST /analyze",
+            "predict": "POST /predict",
+            "generate": "POST /generate",
+            "metrics": "GET /metrics",
+            "avatars": "GET /avatars"
+        }
+    }
+
+# =========================================
+# VIDEO ANALYSIS ENDPOINTS
+# =========================================
 
 @app.post("/analyze")
 async def analyze_video(request: dict):

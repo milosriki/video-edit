@@ -42,3 +42,15 @@ venv/
 .env
 .venv
 env/
+
+# Training data and models (large files)
+backend_core/data/*.csv
+backend_core/models/*.json
+backend_core/models/*.pth
+backend_core/models/*.pt
+*.pkl
+*.pickle
+
+# Keep the directories but not the data
+!backend_core/data/.gitkeep
+!backend_core/models/.gitkeep

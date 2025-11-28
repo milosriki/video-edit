@@ -2,97 +2,160 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# PTD Fitness Demo - AI Video Ad Generator
+# PTD Elite Dashboard
 
-This is an AI-powered video advertising platform for PTD Fitness, deployed on Firebase.
+AI-powered video ad analysis, prediction, and generation platform. Built with React + TypeScript frontend and Python FastAPI backend with an 11-engine AI ensemble for ad performance prediction.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1Nm2qVbh_UivmW6yOFPYo6X9k0CEChDV9
+## 🚀 Quick Start
 
-## 🚀 How to start the Titan Engine (New Backend)
+### Prerequisites
+- Node.js 18+
+- Python 3.11+
+- Google Cloud account (for Gemini API)
+- Supabase account (for database)
+
+### Frontend Setup
 
 ```bash
-uvicorn backend_core.main:app --reload
+# Install dependencies
+npm install
+
+# Copy environment template
+cp .env.example .env.local
+# Edit .env.local with your API keys
+
+# Start development server
+npm run dev
 ```
 
-## Architecture
+### Backend Setup
 
-- **Frontend**: React + TypeScript + Vite (deployed to Firebase Hosting)
-- **Backend**: Firebase Cloud Functions (Node.js + Express + Firestore)
-- **AI**: Google Gemini API for video analysis and creative generation
-- **Database**: Firestore (replacing better-sqlite3)
+```bash
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-## Run Locally
+# Install dependencies
+pip install -r requirements.txt
 
-**Prerequisites:**  Node.js, Firebase CLI (optional)
+# Start FastAPI server (Titan Engine)
+uvicorn backend_core.main:app --reload --port 8080
+```
 
-### Frontend Development
-
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   ```bash
-   npm run dev
-   ```
-
-### Backend Development
-
-1. Navigate to functions directory:
-   ```bash
-   cd functions
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Build:
-   ```bash
-   npm run build
-   ```
-
-## Deploy to Firebase
-
-**Prerequisites:** Firebase CLI installed (`npm install -g firebase-tools`)
-
-1. Login to Firebase:
-   ```bash
-   firebase login
-   ```
-
-2. Deploy hosting and functions:
-   ```bash
-   firebase deploy
-   ```
-
-   Or deploy separately:
-   ```bash
-   firebase deploy --only hosting
-   firebase deploy --only functions
-   ```
-
-3. Set environment variables for Cloud Functions:
-   ```bash
-   firebase functions:config:set gemini.api_key="YOUR_GEMINI_API_KEY"
-   ```
-
-## Project Structure
+## 📁 Project Structure
 
 ```
-.
-├── components/          # React components
-├── services/           # Frontend services
-├── utils/              # Utility functions
-├── functions/          # Firebase Cloud Functions
-│   ├── src/
-│   │   ├── index.ts           # Functions entry point
-│   │   ├── services/          # Backend services (Gemini AI)
-│   │   └── ai/knowledge/      # AI knowledge base
-│   └── package.json
-├── firebase.json       # Firebase configuration
-├── .firebaserc        # Firebase project settings
-└── package.json       # Frontend dependencies
+├── App.tsx                 # Main React app with home dashboard
+├── components/             # React UI components
+│   ├── AdWorkflow.tsx      # Video analysis workflow
+│   ├── AnalysisHistory.tsx # Past analyses view
+│   ├── CreatorDashboard.tsx # AI tools dashboard
+│   └── PerformanceDashboard.tsx # Metrics view
+├── services/               # Frontend API clients
+├── backend_core/           # Python FastAPI backend
+│   ├── main.py             # API endpoints
+│   ├── engines/            # 11 AI prediction engines
+│   │   ├── ensemble.py     # Ensemble predictor
+│   │   └── deep_ctr.py     # DeepCTR model
+│   ├── services/           # Backend services
+│   ├── scripts/            # Data extraction scripts
+│   ├── training/           # Model training scripts
+│   └── models/             # Trained model files
+└── api/                    # Vercel serverless entry point
+```
+
+## 🧠 AI Engine Architecture
+
+The platform uses an 11-engine ensemble for ad performance prediction:
+
+1. **DeepCTR** - Click-through rate prediction (trainable)
+2. **Claude** - Anthropic's Claude for creative analysis
+3. **GPT** - OpenAI's GPT for copywriting evaluation
+4. **LLaMA** - Meta's LLaMA for alternative perspectives
+5. **VideoAgent** - Video structure analysis
+6. **VertexVision** - Google Cloud Vision for visual elements
+7. **GoogleAds** - Historical performance patterns
+8. **GA4** - Analytics-based predictions
+9. **FitnessForm** - Domain-specific (fitness) optimization
+10. **Transformation** - Before/after content analysis
+11. **ROAS** - Return on ad spend modeling
+
+## 🏋️ Training DeepCTR on Your Data
+
+To train the prediction model on your historical ad data:
+
+```bash
+# 1. Extract historical data
+python -m backend_core.scripts.extract_historical_data
+
+# 2. Engineer features
+python -m backend_core.training.feature_engineering
+
+# 3. Train the model
+python -m backend_core.training.train_deepctr
+```
+
+The trained model will be saved to `backend_core/models/deepfm_v2_trained.json`.
+
+## 🌐 Deployment
+
+### Vercel (Frontend + Serverless Backend)
+
+1. Connect your GitHub repository to Vercel
+2. Set environment variables in Vercel dashboard:
+   - `VITE_GEMINI_API_KEY`
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+   - `GOOGLE_CLOUD_PROJECT`
+3. Deploy!
+
+See [VERCEL_DEPLOYMENT.md](./VERCEL_DEPLOYMENT.md) for detailed instructions.
+
+### Railway (Python Backend)
+
+For heavy processing, deploy the FastAPI backend to Railway:
+
+1. Connect your repository to Railway
+2. Set the root directory to `/`
+3. Configure environment variables
+4. Set start command: `uvicorn backend_core.main:app --host 0.0.0.0 --port $PORT`
+
+## 🔧 Environment Variables
+
+See `.env.example` for all required environment variables.
+
+### Frontend (VITE_)
+- `VITE_GEMINI_API_KEY` - Google Gemini API key
+- `VITE_SUPABASE_URL` - Supabase project URL
+- `VITE_SUPABASE_ANON_KEY` - Supabase anonymous key
+- `VITE_API_BASE_URL` - Backend API URL (default: `/api`)
+
+### Backend
+- `GOOGLE_CLOUD_PROJECT` - Google Cloud project ID
+- `GOOGLE_API_KEY` - Gemini API key (server-side)
+- `ANTHROPIC_API_KEY` - Claude API key (optional)
+- `OPENAI_API_KEY` - OpenAI API key (optional)
+
+## 📊 API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/health` | GET | Health check and service status |
+| `/` | GET | API information |
+| `/analyze` | POST | Analyze video for winning patterns |
+| `/predict` | POST | Get virality prediction from ensemble |
+| `/generate` | POST | Generate new ad variations |
+| `/metrics` | GET | Get performance metrics |
+| `/avatars` | GET | Get target audience avatars |
+
+## 🧪 Testing
+
+```bash
+# Run frontend build
+npm run build
+
+# Run backend tests (if available)
+cd backend_core && python -m pytest
 ```
 
 ## Features
@@ -102,9 +165,9 @@ uvicorn backend_core.main:app --reload
 - Ad creative generation and ranking
 - Performance dashboard with real-time metrics
 - Video editing and storyboard studio
+- Analysis history with predicted vs actual ROAS tracking
+- Trainable DeepCTR model for custom predictions
 
-## Migration Notes
+## 📝 License
 
-This project has been migrated from a local Express server with better-sqlite3 to Firebase Functions with Firestore. The old `/server` folder has been replaced by the `/functions` folder.
-
-See [functions/README.md](functions/README.md) for more details on the backend architecture.
+Private - PTD Fitness
