@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { WandIcon, VideoIcon, ImageIcon, HeadphonesIcon, MessageSquareIcon, GridIcon } from './icons';
+import { WandIcon, VideoIcon, ImageIcon, HeadphonesIcon, MessageSquareIcon, GridIcon, VSLIcon } from './icons';
 import AdWorkflow from './AdWorkflow';
 import VideoStudio from './VideoGenerator';
 import ImageSuite from './ImageSuite';
 import AudioSuite from './AudioSuite';
 import Assistant from './Assistant';
 import StoryboardStudio from './StoryboardStudio';
+import VSLProEditor from './VSLProEditor';
 
 const tools = [
+  { id: 'vsl', name: 'VSL Pro Editor', icon: VSLIcon, description: 'Direct video editing for VSLs.' },
   { id: 'workflow', name: 'Ad Workflow', icon: WandIcon, description: 'Analyze videos & generate ad blueprints.' },
   { id: 'storyboard', name: 'Storyboard Studio', icon: GridIcon, description: 'Generate a visual storyboard from text.' },
   { id: 'video', name: 'Video Studio', icon: VideoIcon, description: 'Generate & understand videos.' },
@@ -35,17 +37,18 @@ const ToolButton: React.FC<{
 
 
 export const CreatorDashboard: React.FC = () => {
-    const [activeTool, setActiveTool] = useState('workflow');
+    const [activeTool, setActiveTool] = useState('vsl');
 
     const renderActiveTool = () => {
         switch (activeTool) {
+            case 'vsl': return <VSLProEditor />;
             case 'workflow': return <AdWorkflow />;
             case 'storyboard': return <StoryboardStudio />;
             case 'video': return <VideoStudio />;
             case 'image': return <ImageSuite />;
             case 'audio': return <AudioSuite />;
             case 'assistant': return <Assistant />;
-            default: return <AdWorkflow />;
+            default: return <VSLProEditor />;
         }
     }
     
