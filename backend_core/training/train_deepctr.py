@@ -17,6 +17,7 @@ import os
 import sys
 import csv
 import json
+import math
 import random
 from typing import Dict, List, Tuple, Any
 
@@ -92,7 +93,6 @@ def train_test_split(X: List, y: List, test_size: float = 0.2) -> Tuple:
 
 def sigmoid(x: float) -> float:
     """Sigmoid activation function."""
-    import math
     try:
         return 1 / (1 + math.exp(-max(-500, min(500, x))))
     except OverflowError:
@@ -206,7 +206,7 @@ class SimpleDeepFM:
                 
                 # Binary cross-entropy loss
                 eps = 1e-7
-                loss = -(yi * (pred + eps) + (1 - yi) * (1 - pred + eps))
+                loss = -(yi * math.log(pred + eps) + (1 - yi) * math.log(1 - pred + eps))
                 total_loss += abs(loss)
                 
                 # Simple accuracy

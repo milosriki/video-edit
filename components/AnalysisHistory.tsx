@@ -257,14 +257,17 @@ const AnalysisHistory: React.FC = () => {
         </div>
         <div className="bg-gray-800/30 rounded-lg p-4 text-center">
           <div className="text-2xl font-bold text-yellow-400">
-            {Math.round(history.reduce((acc, h) => acc + h.predictedScore, 0) / history.length) || 0}
+            {Math.round(history.reduce((acc, h) => acc + h.predictedScore, 0) / (history.length || 1))}
           </div>
           <div className="text-sm text-gray-400">Avg Score</div>
         </div>
         <div className="bg-gray-800/30 rounded-lg p-4 text-center">
           <div className="text-2xl font-bold text-emerald-400">
-            {(history.filter(h => h.actualRoas).reduce((acc, h) => acc + (h.actualRoas || 0), 0) / 
-              history.filter(h => h.actualRoas).length || 0).toFixed(1)}x
+            {(() => {
+              const withRoas = history.filter(h => h.actualRoas);
+              const total = withRoas.reduce((acc, h) => acc + (h.actualRoas || 0), 0);
+              return (total / (withRoas.length || 1)).toFixed(1);
+            })()}x
           </div>
           <div className="text-sm text-gray-400">Avg ROAS</div>
         </div>

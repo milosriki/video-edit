@@ -2,6 +2,7 @@ from .base import BaseEngine
 from typing import Dict, Any, List
 import os
 import json
+import math
 
 class DeepCTREngine(BaseEngine):
     def __init__(self):
@@ -56,8 +57,6 @@ class DeepCTREngine(BaseEngine):
 
     def _prepare_features(self, input_data: Dict[str, Any]) -> List[float]:
         """Convert input data to feature vector for model prediction."""
-        import math
-        
         features = []
         
         # Categorical features (encoded)

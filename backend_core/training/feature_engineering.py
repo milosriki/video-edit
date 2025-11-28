@@ -16,6 +16,7 @@ Output:
 import os
 import sys
 import csv
+import math
 from collections import Counter
 from typing import Dict, List, Any
 
@@ -107,7 +108,6 @@ def engineer_features(row: Dict, encoders: Dict[str, Dict]) -> Dict:
     
     features["impressions_log"] = safe_float(row.get("impressions"), 1.0)
     if features["impressions_log"] > 0:
-        import math
         features["impressions_log"] = math.log1p(features["impressions_log"])
     
     features["ctr"] = ctr
