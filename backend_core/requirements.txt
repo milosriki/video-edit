@@ -3,14 +3,13 @@ uvicorn
 google-cloud-aiplatform
 google-cloud-bigquery
 pydantic
-google-genai
+google-generativeai
 python-dotenv
 google-cloud-videointelligence
 google-cloud-speech
 supabase
 anthropic
 openai
-google-generativeai
 deepctr-torch
 autogen-agentchat
 autogen-ext

@@ -89,10 +89,15 @@ class MetaAdsEngine:
             print(f"   ├── Ad Set Created: {adset_id}")
 
             # 3. Create Creative (Video + Hook)
+            # Validate page_id is configured to prevent unauthorized ad creation
+            if not self.page_id:
+                print("❌ META: page_id not configured. Cannot create ad creative.")
+                return {"status": "failed", "error": "META_PAGE_ID environment variable not set"}
+            
             creative_params = {
                 'name': f'Creative: {hook_text[:30]}',
                 'object_story_spec': {
-                    'page_id': self.page_id or '123456789',  # Fallback if not set
+                    'page_id': self.page_id,
                     'video_data': {
                         'video_id': self._upload_video(account, video_url),
                         'image_url': 'https://via.placeholder.com/1080x1920',  # Thumbnail

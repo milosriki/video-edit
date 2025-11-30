@@ -80,9 +80,12 @@ class CouncilOfTitans:
             )
             # Handle thinking models which may have different response structure
             score_text = response.text.strip()
-            # Extract just the number if there's extra text
+            # Extract the first number found (most likely the score)
+            # Using first number is more reliable as the score is typically stated upfront
             numbers = re.findall(r'\d+\.?\d*', score_text)
-            score = float(numbers[-1]) if numbers else 75.0
+            score = float(numbers[0]) if numbers else 75.0
+            # Clamp to valid range
+            score = max(0.0, min(100.0, score))
             return {"score": score, "source": "Gemini 2.0 Thinking"}
         except Exception as e:
             print(f"⚠️ Gemini Error: {e}")

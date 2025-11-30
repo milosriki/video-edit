@@ -1,11 +1,6 @@
 from .base import BaseEngine
 from typing import Dict, Any, List
-import random
 import os
-
-# Lazy imports for DeepCTR to prevent startup crashes if dependencies fail
-# from deepctr_torch.models import DeepFM
-# from deepctr_torch.inputs import SparseFeat, DenseFeat, get_feature_names
 
 
 class DeepCTREngine(BaseEngine):
@@ -64,7 +59,9 @@ class DeepCTREngine(BaseEngine):
             from deepctr_torch.models import DeepFM
             import torch
 
-            # Note: l2_reg set to 0 to match training config and avoid PyTorch inplace errors
+            # Note: l2_reg set to 0 to match titan-ad-engine training config.
+            # This prevents PyTorch inplace errors and ensures compatibility with pre-trained weights.
+            # Regularization was applied during training, not inference.
             self.model = DeepFM(self.linear_feature_columns, self.dnn_feature_columns, task='binary', 
                                l2_reg_linear=0, l2_reg_embedding=0, l2_reg_dnn=0)
             self.model.compile("adam", "binary_crossentropy", metrics=['binary_crossentropy'])
@@ -126,7 +123,9 @@ class DeepCTREngine(BaseEngine):
                 return 50.0 
                 
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel("gemini-2.0-flash-exp")
+            # Use configurable model version with fallback
+            model_version = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-2.0-flash-exp")
+            model = genai.GenerativeModel(model_version)
             
             prompt = f"""
             Predict ROAS probability (0-100) for this ad:

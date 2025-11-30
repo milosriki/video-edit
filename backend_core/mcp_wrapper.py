@@ -17,15 +17,19 @@ class MetaAdsMCPClient:
     MCP Client for Meta Ads Server.
     Connects to an external MCP server that provides Meta Ads tools.
     """
-    def __init__(self):
+    def __init__(self, server_script: str = None):
         self.session: Optional[Any] = None
         self.exit_stack: Optional[Any] = None
         self._connected = False
         
-        if MCP_AVAILABLE:
+        # Allow configurable server script path
+        # Default to None to indicate MCP server is optional/not configured
+        server_script = server_script or os.getenv("MCP_SERVER_SCRIPT")
+        
+        if MCP_AVAILABLE and server_script:
             self.server_params = StdioServerParameters(
                 command="python3",
-                args=["backend_core/run_mcp_server.py"],
+                args=[server_script],
                 env={
                     **os.environ,
                     "META_APP_ID": os.getenv("META_APP_ID", ""),
@@ -41,6 +45,10 @@ class MetaAdsMCPClient:
         """Establishes the connection to the MCP server."""
         if not MCP_AVAILABLE:
             print("❌ MCP Client: MCP library not available")
+            return False
+        
+        if not self.server_params:
+            print("❌ MCP Client: No server script configured")
             return False
             
         try:
