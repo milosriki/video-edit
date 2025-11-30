@@ -10,3 +10,12 @@ google-cloud-speech
 supabase
 anthropic
 openai
+google-generativeai
+deepctr-torch
+autogen-agentchat
+autogen-ext
+facebook-business
+mcp
+torch
+numpy
+pandas
