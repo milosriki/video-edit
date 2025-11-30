@@ -12,6 +12,13 @@ except Exception as e:
 def predict_deep_ctr(features: dict) -> float:
     """
     Wrapper that calls the REAL DeepFM model.
+    
+    Args:
+        features: Dict with keys like 'niche', 'hook_type', 'dominant_emotion', etc.
+    
+    Returns:
+        float: Score in 0-10 range for backward compatibility with Scanner UI.
+               Note: The Council (ensemble.py) multiplies this by 10 to get 0-100 scale.
     """
     try:
         # Map the loose features from Gemini/Scanner to the strict schema of DeepCTR
@@ -24,21 +31,13 @@ def predict_deep_ctr(features: dict) -> float:
             "text_density": 0.8 if features.get("text_density") == "high" else 0.3
         }
         
+        # DeepCTREngine.predict_sync() returns 0-100 probability
         score = deep_ctr_engine.predict_sync(formatted_features)
         
-        # Scale: DeepCTR returns 0-100 probability. 
-        # We want to map this to a ROAS-like score (0-10) for the frontend scanner,
-        # OR keep it 0-100 for the Council.
-        # The Council expects 0-100.
-        # The Scanner expects 0-10 ROAS.
-        
-        # Let's return the raw 0-100 probability here, 
-        # and let the consumer decide how to display it.
-        # Wait, the previous mock returned 0-10.
-        # Let's normalize to 0-10 for backward compatibility with the Scanner UI.
-        
-        return score / 10.0 # Returns 0.0 to 10.0
+        # Scale to 0-10 for backward compatibility with Scanner UI
+        # The Council (ensemble.py) will multiply by 10 to normalize to 0-100
+        return score / 10.0
         
     except Exception as e:
         print(f"⚠️ DeepCTR Inference Error: {e}")
-        return 5.0 # Fallback
+        return 5.0 # Fallback (middle of 0-10 range)

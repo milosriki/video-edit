@@ -55,10 +55,12 @@ async def run_titan_flow(video_context: str, niche: str = "fitness") -> Dict[str
             "agent_thoughts": []
         }
     
+    # Use Google's OpenAI-compatible endpoint for AutoGen integration
+    # See: https://ai.google.dev/gemini-api/docs/openai
     model_client = OpenAIChatCompletionClient(
         model=GEMINI_MODEL_VERSION,
         api_key=gemini_key,
-        base_url="https://generativelanguage.googleapis.com/v1beta/openai/", # Google's OpenAI-compatible endpoint
+        base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
         model_info={
             "vision": False,
             "function_calling": True,

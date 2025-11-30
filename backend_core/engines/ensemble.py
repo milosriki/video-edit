@@ -80,9 +80,9 @@ class CouncilOfTitans:
             )
             # Handle thinking models which may have different response structure
             score_text = response.text.strip()
-            # Extract the first number found (most likely the score)
-            # Using first number is more reliable as the score is typically stated upfront
-            numbers = re.findall(r'\d+\.?\d*', score_text)
+            # Extract numbers that look like scores (integers or decimals, not version numbers like 2.0)
+            # Match standalone numbers or numbers at the beginning/end of the text
+            numbers = re.findall(r'(?<![.\d])\d{1,3}(?:\.\d+)?(?![.\d])', score_text)
             score = float(numbers[0]) if numbers else 75.0
             # Clamp to valid range
             score = max(0.0, min(100.0, score))

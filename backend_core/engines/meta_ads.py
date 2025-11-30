@@ -56,6 +56,11 @@ class MetaAdsEngine:
         
         if not self._initialized or not self.access_token:
             return {"status": "simulated", "id": "mock_camp_123"}
+        
+        # Validate page_id upfront to prevent orphaned resources
+        if not self.page_id:
+            print("❌ META: page_id not configured. Cannot create campaign.")
+            return {"status": "failed", "error": "META_PAGE_ID environment variable not set"}
 
         try:
             account = AdAccount(self.account_id)
@@ -89,10 +94,6 @@ class MetaAdsEngine:
             print(f"   ├── Ad Set Created: {adset_id}")
 
             # 3. Create Creative (Video + Hook)
-            # Validate page_id is configured to prevent unauthorized ad creation
-            if not self.page_id:
-                print("❌ META: page_id not configured. Cannot create ad creative.")
-                return {"status": "failed", "error": "META_PAGE_ID environment variable not set"}
             
             creative_params = {
                 'name': f'Creative: {hook_text[:30]}',
