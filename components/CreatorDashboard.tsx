@@ -1,19 +1,24 @@
 import React, { useState } from 'react';
-import { WandIcon, VideoIcon, ImageIcon, HeadphonesIcon, MessageSquareIcon, GridIcon } from './icons';
+import { WandIcon, VideoIcon, ImageIcon, HeadphonesIcon, MessageSquareIcon, GridIcon, TagIcon, SparklesIcon, ScissorsIcon } from './icons';
 import AdWorkflow from './AdWorkflow';
 import VideoStudio from './VideoGenerator';
 import ImageSuite from './ImageSuite';
 import AudioSuite from './AudioSuite';
 import Assistant from './Assistant';
 import StoryboardStudio from './StoryboardStudio';
+import KnowledgeBase from './KnowledgeBase';
+import BlueprintGenerator from './BlueprintGenerator';
+import AIAssistant from './AIAssistant';
 
 const tools = [
   { id: 'workflow', name: 'Ad Workflow', icon: WandIcon, description: 'Analyze videos & generate ad blueprints.' },
+  { id: 'blueprints', name: 'Blueprint Generator', icon: SparklesIcon, description: 'Generate 50+ ad variations ranked by ROAS.' },
+  { id: 'knowledge', name: 'Knowledge Base', icon: TagIcon, description: 'View winning patterns from $2M data.' },
+  { id: 'titan-chat', name: 'TITAN Assistant', icon: MessageSquareIcon, description: 'Chat with proactive memory.' },
   { id: 'storyboard', name: 'Storyboard Studio', icon: GridIcon, description: 'Generate a visual storyboard from text.' },
   { id: 'video', name: 'Video Studio', icon: VideoIcon, description: 'Generate & understand videos.' },
   { id: 'image', name: 'Image Studio', icon: ImageIcon, description: 'Generate, edit, and analyze images.' },
   { id: 'audio', name: 'Audio Studio', icon: HeadphonesIcon, description: 'Create voiceovers and transcribe audio.' },
-  { id: 'assistant', name: 'AI Assistant', icon: MessageSquareIcon, description: 'Chat with your AI ad strategist.' },
 ];
 
 const ToolButton: React.FC<{
@@ -40,6 +45,9 @@ export const CreatorDashboard: React.FC = () => {
     const renderActiveTool = () => {
         switch (activeTool) {
             case 'workflow': return <AdWorkflow />;
+            case 'blueprints': return <BlueprintGenerator />;
+            case 'knowledge': return <KnowledgeBase />;
+            case 'titan-chat': return <AIAssistant />;
             case 'storyboard': return <StoryboardStudio />;
             case 'video': return <VideoStudio />;
             case 'image': return <ImageSuite />;
