@@ -1,4 +1,16 @@
-# How to Connect "Project Chimera" (Fastest Setup)
+
+Bar chart
+
+Service Error Information
+Cloud Run container instances that exceed their allowed memory limit are terminated. Consider increasing the memory limit of your Cloud Run service.
+Troubleshooting guide 
+Recent samples Learn more 
+11/20/25, 7:40 AM
+'Memory limit of 256 MiB exceeded with 284 MiB used. Consider increasing the memory limit, see https://cloud.google.com/functions/docs/configuring/memory'
+-
+View Logs
+11/20/25, 7:23 AM
+'Memory limit of 256 MiB exceeded with 260 MiB used. Consider increasing the memory limit, see https://cloud.google.com/functions/docs/configuring/memory'# How to Connect "Project Chimera" (Fastest Setup)
 
 You want to use the powerful AI/NLP/RAG capabilities from your **Chimera** project while keeping the logs in **PTD Fitness Demo**. Here is the fastest way to do it.
 
