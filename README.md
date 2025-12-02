@@ -103,6 +103,15 @@ uvicorn backend_core.main:app --reload
 - Performance dashboard with real-time metrics
 - Video editing and storyboard studio
 
+## 📊 Repository Comparison
+
+Want to understand the full capabilities of this platform? Check out our comprehensive comparison documents:
+
+- **[Complete Comparison](./VIDEO_EDIT_VS_GEMINIVIDEO_COMPARISON.md)**: Detailed analysis of all 50+ video editing features, AI capabilities, and technical architecture
+- **[Quick Summary](./QUICK_COMPARISON_SUMMARY.md)**: At-a-glance comparison with feature counts and key highlights
+
+These documents catalog all video editing tools, AI-powered features, audio/image processing capabilities, and backend services that make this a production-ready video advertising platform.
+
 ## Migration Notes
 
 This project has been migrated from a local Express server with better-sqlite3 to Firebase Functions with Firestore. The old `/server` folder has been replaced by the `/functions` folder.
