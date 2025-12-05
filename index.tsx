@@ -3,8 +3,12 @@ import './index.css';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { inject } from '@vercel/analytics';
 
 console.log('🚀 Starting app initialization...');
+
+// Initialize Vercel Web Analytics
+inject();
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
