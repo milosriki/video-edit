@@ -85,14 +85,14 @@ const ToolOrchestrator: React.FC = () => {
         { 
             id: 'ad_alpha_intelligence', 
             name: 'Ad Alpha Core', 
-            endpoint: 'https://ad-alpha-mcp-server-489769736562.us-central1.run.app', 
+            endpoint: 'https://ad-alpha-mcp-xej66rtyoa-uc.a.run.app', 
             description: 'The master PTD MCP server for direct response auditing and conversion engineering.', 
             status: 'online' 
         },
         { 
             id: 'verify_winning_ad', 
             name: 'The Truth Checker', 
-            endpoint: 'https://ad-alpha-mcp.a.run.app/verify_winning_ad', 
+            endpoint: 'https://ad-alpha-mcp-xej66rtyoa-uc.a.run.app/verify_winning_ad', 
             description: 'Cross-references FB Clicks with HubSpot Customers to find REAL ROI.', 
             status: 'online' 
         }

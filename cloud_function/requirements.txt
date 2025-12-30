@@ -1,0 +1,5 @@
+# Required for Google Cloud Functions
+functions-framework==3.*
+
+# Required for Vertex AI (to use Gemini)
+google-cloud-aiplatform==1.56.0
