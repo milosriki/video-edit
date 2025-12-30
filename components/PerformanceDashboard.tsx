@@ -1,48 +1,36 @@
+
 import React, { useEffect, useMemo, useState } from 'react';
-import { useQuery, QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { BarChartIcon } from './icons';
-import { titanClient } from '../frontend/src/api/titan_client';
 
-const qc = new QueryClient();
-
-type Overview = {
-  totals: {
-    impressions: number;
-    clicks: number;
-    conversions: number;
-    spend: number;
-    revenue: number;
-    ctr: number;
-    cvr: number;
-    cpa: number;
-    roas: number;
-  };
-};
-
-type CreativePerf = {
-  creativeId: string;
-  name: string;
-  platform: string;
-  campaign: string;
-  impressions: number;
-  clicks: number;
-  conversions: number;
-  spend: number;
-  revenue: number;
-  ctr: number;
-  cvr: number;
-  cpa: number;
-  roas: number;
-};
-
-type TimeseriesPoint = { ts: number; value: number };
-
-const API_BASE = (import.meta as any).env?.VITE_API_URL || '/api';
-
-const fetchJSON = async <T,>(url: string): Promise<T> => {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`API ${res.status}: ${url}`);
-  return res.json() as Promise<T>;
+// Local Mock Data Provider
+const mockData = {
+  getOverview: (from: number, to: number) => ({
+    totals: {
+      impressions: 145200,
+      clicks: 8420,
+      conversions: 342,
+      spend: 4250.50,
+      revenue: 16150.00,
+      ctr: 0.058,
+      cvr: 0.0406,
+      cpa: 12.42,
+      roas: 3.8
+    }
+  }),
+  getCreatives: () => [
+    { creativeId: 'c1', name: 'Boardroom Edge - Men 40+', platform: 'Instagram', campaign: 'Dubai-Exec-Q3', impressions: 45000, clicks: 3200, conversions: 120, spend: 1200, revenue: 5400, ctr: 0.071, cvr: 0.0375, cpa: 10, roas: 4.5 },
+    { creativeId: 'c2', name: 'Strong Jiddo - Longevity', platform: 'Facebook', campaign: 'Health-Dubai-50', impressions: 38000, clicks: 2100, conversions: 85, spend: 950, revenue: 3800, ctr: 0.055, cvr: 0.0404, cpa: 11.17, roas: 4.0 },
+    { creativeId: 'c3', name: 'Private Boutique - Women', platform: 'Instagram', campaign: 'Abu-Dhabi-Female', impressions: 22000, clicks: 1200, conversions: 45, spend: 800, revenue: 2900, ctr: 0.054, cvr: 0.0375, cpa: 17.77, roas: 3.6 },
+    { creativeId: 'c4', name: 'Executive Protocol Reel', platform: 'Reels', campaign: 'Dubai-Exec-Q3', impressions: 40200, clicks: 1920, conversions: 92, spend: 1300, revenue: 4050, ctr: 0.047, cvr: 0.0479, cpa: 14.13, roas: 3.1 },
+  ],
+  getTimeseries: (metric: string) => {
+    const points = [];
+    const now = Date.now();
+    for(let i=30; i>=0; i--) {
+        points.push({ ts: now - (i * 24 * 60 * 60 * 1000), value: Math.floor(Math.random() * 500) + 200 });
+    }
+    return points;
+  }
 };
 
 const number = (n: number) => new Intl.NumberFormat().format(n);
@@ -63,7 +51,7 @@ const TableHeaderCell: React.FC<{ children: React.ReactNode }> = ({ children }) 
   return <th className="px-3 py-2 text-left text-xs font-semibold text-gray-300 bg-gray-800/70">{children}</th>;
 }
 
-function Chart({ data, label }: { data: TimeseriesPoint[]; label: string }) {
+function Chart({ data, label }: { data: {ts: number, value: number}[]; label: string }) {
   const width = 600;
   const height = 140;
   const pad = 12;
@@ -91,64 +79,29 @@ function Chart({ data, label }: { data: TimeseriesPoint[]; label: string }) {
         <svg width="100%" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={label}>
           <defs>
             <linearGradient id="fill" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="#818cf8" stopOpacity="0.35" />
-              <stop offset="100%" stopColor="#818cf8" stopOpacity="0" />
+              <stop offset="0%" stopColor="#818cf8" stopOpacity="0.35"/>
+              <stop offset="100%" stopColor="#818cf8" stopOpacity="0"/>
             </linearGradient>
           </defs>
-          <path d={path} fill="none" stroke="#818cf8" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-          <path d={`${path} L ${scaleX(maxX)} ${height - pad} L ${scaleX(minX)} ${height - pad} Z`} fill="url(#fill)" opacity="0.5" />
+          <path d={path} fill="none" stroke="#818cf8" strokeWidth="2" vectorEffect="non-scaling-stroke"/>
+          <path d={`${path} L ${scaleX(maxX)} ${height - pad} L ${scaleX(minX)} ${height - pad} Z`} fill="url(#fill)" opacity="0.5"/>
         </svg>
       )}
     </div>
   );
 }
 
-function InnerPerformanceDashboard() {
+export function PerformanceDashboard() {
   const [days, setDays] = useState<7 | 14 | 30>(7);
   const [metric, setMetric] = useState<'impressions' | 'clicks' | 'conversions' | 'spend' | 'revenue'>('revenue');
   const [selectedCreative, setSelectedCreative] = useState<string | null>(null);
+  
   const to = useMemo(() => Date.now(), []);
   const from = useMemo(() => to - days * 24 * 60 * 60 * 1000, [to, days]);
-  const queryClient = useQueryClient();
 
-  const overviewQ = useQuery({
-    queryKey: ['overview', from, to],
-    queryFn: async () => {
-      // Use the new Titan Client
-      const metrics = await titanClient.getDashboardMetrics(days);
-      return metrics; // metrics.totals matches the Overview type
-    }
-  });
-
-  const creativesQ = useQuery({
-    queryKey: ['creatives', from, to],
-    queryFn: () => fetchJSON<CreativePerf[]>(`${API_BASE}/creatives?from=${from}&to=${to}&sort=roas&order=desc&limit=50`)
-  });
-
-  const tsQ = useQuery({
-    enabled: !!selectedCreative,
-    queryKey: ['timeseries', selectedCreative, metric, from, to],
-    queryFn: () =>
-      fetchJSON<TimeseriesPoint[]>(
-        `${API_BASE}/timeseries?creativeId=${selectedCreative}&metric=${metric}&granularity=day&from=${from}&to=${to}`
-      )
-  });
-
-  useEffect(() => {
-    const es = new EventSource(`${API_BASE}/stream`);
-    es.onmessage = () => {
-      // Invalidate queries to get live data. React Query will automatically refetch active queries.
-      queryClient.invalidateQueries({ queryKey: ['overview'] });
-      queryClient.invalidateQueries({ queryKey: ['creatives'] });
-      queryClient.invalidateQueries({ queryKey: ['timeseries'] });
-    };
-    es.onerror = () => {
-      // The browser's EventSource will automatically retry on network hiccups.
-    };
-    return () => es.close();
-  }, [queryClient]); // Dependency on queryClient, which is stable.
-
-  const totals = overviewQ.data?.totals;
+  const totals = useMemo(() => mockData.getOverview(from, to).totals, [from, to]);
+  const creatives = useMemo(() => mockData.getCreatives(), []);
+  const timeseries = useMemo(() => mockData.getTimeseries(metric), [selectedCreative, metric, from, to]);
 
   return (
     <div className="space-y-6">
@@ -158,19 +111,21 @@ function InnerPerformanceDashboard() {
           <h2 className="text-xl font-bold">Performance Dashboard</h2>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setDays(7)} className={`px-3 py-1 rounded text-sm ${days === 7 ? 'bg-indigo-600' : 'bg-gray-700 hover:bg-gray-600'}`}>7d</button>
-          <button onClick={() => setDays(14)} className={`px-3 py-1 rounded text-sm ${days === 14 ? 'bg-indigo-600' : 'bg-gray-700 hover:bg-gray-600'}`}>14d</button>
-          <button onClick={() => setDays(30)} className={`px-3 py-1 rounded text-sm ${days === 30 ? 'bg-indigo-600' : 'bg-gray-700 hover:bg-gray-600'}`}>30d</button>
+          {[7, 14, 30].map(d => (
+             <button key={d} onClick={() => setDays(d as any)} className={`px-3 py-1 rounded text-sm ${days === d ? 'bg-indigo-600' : 'bg-gray-700 hover:bg-gray-600'}`}>{d}d</button>
+          ))}
         </div>
       </div>
+      
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
-        <KpiCard label="Impressions" value={totals ? number(totals.impressions) : '—'} />
-        <KpiCard label="Clicks" value={totals ? number(totals.clicks) : '—'} help={totals ? `CTR ${pct(totals.ctr)}` : undefined} />
-        <KpiCard label="Conversions" value={totals ? number(totals.conversions) : '—'} help={totals ? `CVR ${pct(totals.cvr)}` : undefined} />
-        <KpiCard label="Spend" value={totals ? money(totals.spend) : '—'} />
-        <KpiCard label="Revenue" value={totals ? money(totals.revenue) : '—'} />
-        <KpiCard label="ROAS" value={totals ? pct(totals.roas) : '—'} help={totals ? `CPA ${money(totals.cpa)}` : undefined} />
+        <KpiCard label="Impressions" value={number(totals.impressions)} />
+        <KpiCard label="Clicks" value={number(totals.clicks)} help={`CTR ${pct(totals.ctr)}`} />
+        <KpiCard label="Conversions" value={number(totals.conversions)} help={`CVR ${pct(totals.cvr)}`} />
+        <KpiCard label="Spend" value={money(totals.spend)} />
+        <KpiCard label="Revenue" value={money(totals.revenue)} />
+        <KpiCard label="ROAS" value={pct(totals.roas)} help={`CPA ${money(totals.cpa)}`} />
       </div>
+
       <div className="bg-gray-800/60 border border-gray-700/60 rounded-lg overflow-hidden">
         <div className="px-3 py-2 flex items-center justify-between">
           <div className="text-sm font-semibold">Top Creatives</div>
@@ -179,7 +134,7 @@ function InnerPerformanceDashboard() {
             <select
               value={metric}
               onChange={e => setMetric(e.target.value as any)}
-              className="bg-gray-900 border border-gray-700 rounded px-2 py-1"
+              className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-white"
             >
               <option value="revenue">Revenue</option>
               <option value="spend">Spend</option>
@@ -200,7 +155,7 @@ function InnerPerformanceDashboard() {
               </tr>
             </thead>
             <tbody>
-              {(creativesQ.data || []).map(c => (
+              {creatives.map(c => (
                 <tr key={c.creativeId} onClick={() => setSelectedCreative(c.creativeId)} className={`cursor-pointer border-b border-gray-800/70 hover:bg-gray-800/40 ${selectedCreative === c.creativeId ? 'bg-indigo-600/10' : ''}`}>
                   <td className="px-3 py-2 text-sm font-semibold">{c.name}</td>
                   <td className="px-3 py-2 text-sm text-gray-300">{c.platform}</td>
@@ -216,13 +171,11 @@ function InnerPerformanceDashboard() {
                   <td className="px-3 py-2 text-sm">{money(c.revenue)}</td>
                 </tr>
               ))}
-              {creativesQ.isLoading && (
-                <tr><td colSpan={12} className="px-3 py-3 text-center text-gray-400">Loading creatives…</td></tr>
-              )}
             </tbody>
           </table>
         </div>
       </div>
+      
       {selectedCreative && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
@@ -230,20 +183,12 @@ function InnerPerformanceDashboard() {
             <button onClick={() => setSelectedCreative(null)} className="text-xs text-gray-400 hover:text-white underline">Clear selection</button>
           </div>
           <Chart
-            data={(tsQ.data || []).map(p => ({ ts: p.ts, value: p.value }))}
+            data={timeseries}
             label={`Daily ${metric}`}
           />
         </div>
       )}
     </div>
-  );
-}
-
-export function PerformanceDashboard() {
-  return (
-    <QueryClientProvider client={qc}>
-      <InnerPerformanceDashboard />
-    </QueryClientProvider>
   );
 }
 

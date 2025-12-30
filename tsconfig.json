@@ -11,8 +11,7 @@
     ],
     "skipLibCheck": true,
     "types": [
-      "node",
-      "vite/client"
+      "node"
     ],
     "moduleResolution": "bundler",
     "isolatedModules": true,
@@ -25,10 +24,6 @@
       ]
     },
     "allowImportingTsExtensions": true,
-    "noEmit": true,
-    "strict": false,
-    "esModuleInterop": true,
-    "resolveJsonModule": true
-  },
-  "exclude": ["tests/**/*", "node_modules"]
+    "noEmit": true
+  }
 }

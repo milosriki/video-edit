@@ -1,0 +1,30 @@
+{
+  "dubai_men_40_exec": {
+    "name": "Dubai Men 40+ (Executive)",
+    "pain_points": "Stress belly, low energy, losing competitive edge, 'no time'.",
+    "desires": "Peak performance, boardroom dominance, status, respect.",
+    "psych_hook": "Status & Superiority",
+    "language": "Need my edge back, 6AM Sessions, Executive Protocol"
+  },
+  "dubai_men_50_health": {
+    "name": "Dubai Men 50+ (Family/Health Focus)",
+    "pain_points": "Health scares (pre-diabetes, high cholesterol), joint pain, medication dependency, fear of 'slowing down'.",
+    "desires": "Longevity, strength for family (play with grandkids), get off meds, be a 'strong Jiddo'.",
+    "psych_hook": "Longevity & Legacy",
+    "language": "Stay strong for my family, Doctor said it's my age, Medical-Grade"
+  },
+  "abu_dhabi_women_40_family": {
+    "name": "Abu Dhabi Women 40+ (Cultural/Family)",
+    "pain_points": "'Mummy tummy', traditional food weight, cultural barriers, 'lost spark', 'no time with kids'.",
+    "desires": "Feel modern and healthy, set example for daughters, 'make him notice you again'.",
+    "psych_hook": "Family Role Model & Validation",
+    "language": "100% Female Team, Cultural Respect, Private Sessions, Need husband's approval"
+  },
+  "abu_dhabi_women_50_social": {
+    "name": "Abu Dhabi Women 50+ (Hormonal/Social)",
+    "pain_points": "Menopause weight gain, hormonal chaos, stress eating, 'feeling invisible'.",
+    "desires": "Fit elegant gowns, 'feel like yourself again', beat menopause, maintain social standing.",
+    "psych_hook": "Social Standing & Control",
+    "language": "Menopause Mastery, Fix hormones, Elegant, Discreet"
+  }
+}

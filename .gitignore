@@ -11,17 +11,6 @@ node_modules
 dist
 dist-ssr
 *.local
-package-lock.json
-
-# Firebase
-.firebase/
-firebase-debug.log*
-firebase-debug.*.log
-functions/dist
-
-# Compiled TypeScript files
-*.js
-!functions/dist/**/*.js
 
 # Editor directories and files
 .vscode/*
@@ -33,12 +22,3 @@ functions/dist
 *.njsproj
 *.sln
 *.sw?
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-venv/
-.env
-.venv
-env/

@@ -1,7 +1,0 @@
-google-genai
-ffmpeg-python
-moviepy
-pexels-api-py
-rich
-schedule
-requests

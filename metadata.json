@@ -1,7 +1,9 @@
 {
-  "name": "Copy of AI Video Ad Generator",
-  "description": "Upload a video, get an AI-powered analysis, and generate compelling direct conversion ad copy in seconds.",
+  "name": "PTD Command Center",
+  "description": "High-performance AI Video Ad Generator and Predictive Intelligence Suite.",
   "requestFramePermissions": [
-    "microphone"
+    "microphone",
+    "camera",
+    "geolocation"
   ]
 }

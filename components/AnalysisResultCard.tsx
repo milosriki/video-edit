@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+
+import React, { useState, useMemo } from 'react';
 import { VideoFile } from '../types';
-import { EyeIcon, SmileIcon, TagIcon, WandIcon, ScissorsIcon, FilmIcon, SoundWaveIcon, SlidersIcon } from './icons';
+import { EyeIcon, FilmIcon, SoundWaveIcon, SparklesIcon, PlayIcon, CheckIcon, ScissorsIcon } from './icons';
+import VideoPlayer from './VideoPlayer';
 
 interface AnalysisResultCardProps {
   videoFile: VideoFile;
@@ -9,178 +11,219 @@ interface AnalysisResultCardProps {
   onOpenAdvancedEditor: () => void;
 }
 
-const TabButton: React.FC<{ active: boolean; onClick: () => void; children: React.ReactNode }> = ({ active, onClick, children }) => (
+const TabButton: React.FC<{ 
+  active: boolean; 
+  onClick: () => void; 
+  id: string; 
+  controls: string; 
+  children: React.ReactNode 
+}> = ({ active, onClick, id, controls, children }) => (
     <button
+        id={id}
+        role="tab"
+        aria-selected={active}
+        aria-controls={controls}
         onClick={onClick}
-        className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
-            active ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:bg-gray-700'
+        className={`px-5 py-2.5 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 flex items-center gap-2.5 relative border ${
+            active 
+            ? 'bg-indigo-600 text-white border-indigo-500 shadow-[0_0_20px_rgba(79,70,229,0.4)]' 
+            : 'text-gray-500 border-white/5 hover:bg-white/5 hover:text-gray-300'
         }`}
     >
         {children}
+        {active && (
+          <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-indigo-400 rounded-full shadow-[0_0_8px_rgba(129,140,248,1)]"></span>
+        )}
     </button>
 );
 
 const ToolButton: React.FC<{ onClick: () => void; children: React.ReactNode, className?: string, icon: React.ReactNode, disabled?: boolean }> = ({ onClick, children, className = '', icon, disabled = false }) => (
-    <button onClick={onClick} disabled={disabled} className={`flex-1 font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}>
+    <button onClick={onClick} disabled={disabled} className={`flex-1 font-black text-[10px] uppercase tracking-widest py-3.5 px-4 rounded-2xl flex items-center justify-center gap-2.5 transition-all transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed border border-white/5 shadow-lg ${className}`}>
         {icon}
         {children}
     </button>
 );
 
-
-const AnalysisResultCard: React.FC<AnalysisResultCardProps> = ({ videoFile, onGenerateBlueprints, onOpenCutter, onOpenAdvancedEditor }) => {
+const AnalysisResultCard: React.FC<AnalysisResultCardProps> = ({ videoFile, onOpenCutter }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [activeTab, setActiveTab] = useState<'scenes' | 'elements' | 'tone' | 'audio'>('scenes');
+  const [activeTab, setActiveTab] = useState<'hooks' | 'scenes' | 'audio'>('hooks');
+  const [showPlayer, setShowPlayer] = useState(false);
   
-  const { status, analysisResult, thumbnail, id, error, progress, loadingMessage } = videoFile;
+  const { status, analysisResult, thumbnail, id, progress, loadingMessage, file } = videoFile;
+  
+  const videoUrl = useMemo(() => file ? URL.createObjectURL(file) : null, [file]);
   
   const isAnalyzed = status === 'analyzed' && analysisResult;
   const rank = analysisResult?.rank;
   const isTopRanked = isAnalyzed && rank === 1;
-  const hasAudioAnalysis = isAnalyzed && analysisResult.audioAnalysis && (analysisResult.audioAnalysis.summary || (analysisResult.audioAnalysis.keyPhrases && analysisResult.audioAnalysis.keyPhrases.length > 0));
-
-
-  const renderStatusPill = () => {
-    switch (status) {
-      case 'processing':
-        return <span className="text-xs font-medium text-yellow-300 bg-yellow-900/50 px-2 py-1 rounded-full">Processing...</span>;
-      case 'analyzed':
-        return <span className="text-xs font-medium text-green-300 bg-green-900/50 px-2 py-1 rounded-full">Analyzed</span>;
-      case 'error':
-        return <span className="text-xs font-medium text-red-300 bg-red-900/50 px-2 py-1 rounded-full">Error</span>;
-      case 'pending':
-        return <span className="text-xs font-medium text-gray-300 bg-gray-700/50 px-2 py-1 rounded-full">Queued</span>;
-    }
-  };
 
   return (
-    <div className={`rounded-lg border-2 transition-all duration-300 ${isTopRanked ? 'bg-green-900/30 border-green-500' : 'bg-gray-900/50 border-gray-700'}`}>
-        <div className="p-4">
-            <div className="flex items-start gap-4">
-                {/* Thumbnail & Rank */}
-                <div className="flex-shrink-0 text-center w-24">
-                    {isAnalyzed && typeof rank === 'number' ? (
-                      <div className="text-3xl font-bold">#{rank}</div>
-                    ) : (
-                      <div className="text-3xl font-bold text-gray-600">--</div>
-                    )}
-                    {thumbnail ? (
-                      <img src={thumbnail} alt={id} className="w-24 h-24 object-cover rounded-md mt-2"/>
-                    ) : (
-                      <div className="w-24 h-24 bg-gray-800 rounded-md mt-2 flex items-center justify-center">
-                        <FilmIcon className="w-10 h-10 text-gray-600"/>
-                      </div>
-                    )}
+    <div className={`rounded-[2.5rem] border transition-all duration-500 glass-panel shadow-2xl overflow-hidden group/card ${isTopRanked ? 'bg-indigo-600/5 border-indigo-500/40 ring-1 ring-indigo-500/20' : 'border-white/5 hover:border-white/10'}`}>
+        <div className="p-7">
+            <div className="flex gap-7">
+                {/* Thumbnail & Player Trigger */}
+                <div className="flex-shrink-0">
+                    <div 
+                      className="relative group cursor-pointer"
+                      onClick={() => videoUrl && setShowPlayer(!showPlayer)}
+                    >
+                        {thumbnail ? (
+                          <img src={thumbnail} alt={`Thumbnail for ${id}`} className="w-28 h-28 object-cover rounded-3xl border border-white/10 shadow-2xl transition-all duration-500 group-hover:scale-105 group-hover:brightness-50"/>
+                        ) : (
+                          <div className="w-28 h-28 bg-black/40 rounded-3xl border border-white/10 flex items-center justify-center">
+                            <FilmIcon className="w-12 h-12 text-gray-700"/>
+                          </div>
+                        )}
+                        
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                          <PlayIcon className="w-10 h-10 text-white fill-current" />
+                        </div>
+
+                        {isAnalyzed && (
+                            <div className="absolute -top-3 -right-3 w-11 h-11 rounded-full bg-indigo-600 flex flex-col items-center justify-center shadow-2xl z-10 border-4 border-[#0a0a0f]">
+                                <span className="text-[8px] font-black leading-none opacity-60">RANK</span>
+                                <span className="text-sm font-black text-white leading-none">{rank}</span>
+                            </div>
+                        )}
+                    </div>
                 </div>
                 
                 {/* Info & Status */}
-                <div className="flex-grow min-w-0">
-                    <div className="flex justify-between items-start">
-                      <h4 className="font-bold text-lg max-w-xs truncate" title={id}>{id}</h4>
-                      {renderStatusPill()}
+                <div className="flex-grow min-w-0 flex flex-col justify-center">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h4 className="font-black text-xl text-white truncate" title={id}>{id}</h4>
+                      {isTopRanked && <SparklesIcon className="w-4 h-4 text-yellow-400 animate-pulse" />}
                     </div>
-                    
-                    {isAnalyzed && analysisResult && (
-                      <>
-                        <p className="text-sm text-gray-400 mt-1"><strong className="text-gray-200">Summary:</strong> {analysisResult.summary}</p>
-                        <p className="text-sm text-gray-400 mt-1"><strong className="text-gray-200">Justification:</strong> {analysisResult.justification}</p>
-                        <button onClick={() => setIsExpanded(prev => !prev)} className="text-indigo-400 hover:text-indigo-300 text-sm font-semibold mt-2">
-                            {isExpanded ? 'Hide' : 'View'} Deep Analysis
-                        </button>
-                      </>
-                    )}
-                    {status === 'processing' && (
-                        <div className="mt-2">
-                            <p className="text-sm font-semibold text-yellow-300">{loadingMessage || 'Processing...'}</p>
-                            <div className="w-full bg-gray-700 rounded-full h-1.5 mt-1">
-                                <div className="bg-yellow-500 h-1.5 rounded-full transition-all" style={{ width: `${progress || 0}%` }}></div>
+                    {isAnalyzed ? (
+                         <div className="flex flex-wrap items-center gap-2">
+                             <div className="flex items-center gap-1.5 bg-green-500/10 px-2.5 py-1 rounded-full border border-green-500/20">
+                                <CheckIcon className="w-3 h-3 text-green-400" />
+                                <span className="text-[10px] font-black text-green-400 uppercase tracking-widest">DR_READY</span>
+                             </div>
+                             <div className="w-1 h-1 bg-gray-700 rounded-full"></div>
+                             <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{analysisResult.hooks.length} Hook Points</span>
+                             {analysisResult.uaeCompliance && (
+                               <>
+                                 <div className="w-1 h-1 bg-gray-700 rounded-full"></div>
+                                 <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">UAE_SAFE</span>
+                               </>
+                             )}
+                         </div>
+                    ) : status === 'processing' ? (
+                        <div className="space-y-3">
+                            <div className="flex justify-between items-end">
+                                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest animate-pulse flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-indigo-500 rounded-full animate-ping"></div>
+                                  {loadingMessage || 'Analyzing Multimodal Layers...'}
+                                </span>
+                                <span className="text-[10px] font-mono text-gray-500 font-bold">{progress}%</span>
+                            </div>
+                            <div className="w-full bg-white/5 rounded-full h-1.5 overflow-hidden border border-white/5">
+                                <div className="bg-indigo-500 h-full rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]" style={{ width: `${progress}%` }}></div>
                             </div>
                         </div>
-                    )}
-                    {status === 'error' && (
-                        <div className="mt-2 bg-red-900/40 border-l-4 border-red-600 text-red-300 p-3 rounded-r-md">
-                            <p className="font-semibold text-sm">Processing Failed</p>
-                            <p className="text-xs mt-1">{error}</p>
+                    ) : (
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <div className="w-2 h-2 bg-gray-800 rounded-full"></div>
+                          <span className="text-[10px] font-black uppercase tracking-widest italic">Awaiting Command</span>
                         </div>
                     )}
                 </div>
             </div>
             
-            {/* Action Buttons */}
-            {isAnalyzed && (
-              <div className="mt-4 pt-4 border-t border-gray-700/50 flex flex-col sm:flex-row gap-3">
-                  <ToolButton onClick={onGenerateBlueprints} icon={<WandIcon className="w-5 h-5"/>} className="bg-purple-600 hover:bg-purple-700 text-white">
-                      Generate Blueprints
-                  </ToolButton>
-                  <ToolButton onClick={onOpenCutter} icon={<ScissorsIcon className="w-5 h-5"/>} className="bg-gray-700 hover:bg-gray-600 text-white">
-                      Smart Cutter
-                  </ToolButton>
-                   <ToolButton onClick={onOpenAdvancedEditor} icon={<SlidersIcon className="w-5 h-5"/>} className="bg-gray-700 hover:bg-gray-600 text-white">
-                      Manual Editor
-                  </ToolButton>
+            {showPlayer && videoUrl && (
+              <div className="mt-8 animate-fade-in relative rounded-3xl overflow-hidden border border-white/5 shadow-2xl">
+                <VideoPlayer src={videoUrl} />
+                <button 
+                  onClick={() => setShowPlayer(false)}
+                  className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white w-10 h-10 rounded-full flex items-center justify-center hover:bg-black/80 transition-all z-20 border border-white/10"
+                >
+                  <span className="text-2xl font-light leading-none">&times;</span>
+                </button>
               </div>
+            )}
+            
+            {isAnalyzed && (
+                <div className="mt-8 flex gap-3">
+                    <ToolButton onClick={() => setIsExpanded(!isExpanded)} icon={<EyeIcon className="w-4 h-4"/>} className="bg-white/5 hover:bg-white/10 text-gray-400">
+                        {isExpanded ? 'Minimize Intel' : 'Deconstruct Assets'}
+                    </ToolButton>
+                    <ToolButton onClick={onOpenCutter} icon={<ScissorsIcon className="w-4 h-4"/>} className="bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border-indigo-500/20">
+                        Neural Cutter
+                    </ToolButton>
+                </div>
             )}
         </div>
 
-        {/* Expanded Deep Analysis Panel */}
-        {isAnalyzed && isExpanded && analysisResult && (
-            <div className="bg-gray-900/40 p-4 border-t-2 border-dashed border-gray-700 animate-fade-in">
-                <div className="flex space-x-2 border-b border-gray-700 mb-4 overflow-x-auto pb-2">
-                    <TabButton active={activeTab === 'scenes'} onClick={() => setActiveTab('scenes')}>
-                        <div className="flex items-center gap-2"><EyeIcon className="w-4 h-4" /> Scene Breakdown</div>
+        {isAnalyzed && isExpanded && (
+            <div className="px-7 pb-8 pt-2 border-t border-white/5 animate-fade-in bg-black/10">
+                <div role="tablist" aria-label="Analysis Tabs" className="flex gap-4 mb-7 pt-5 border-t border-white/5 overflow-x-auto pb-2 scrollbar-hide">
+                    <TabButton 
+                        id="tab-hooks"
+                        controls="panel-hooks"
+                        active={activeTab === 'hooks'} 
+                        onClick={() => setActiveTab('hooks')}
+                    >
+                        <SparklesIcon className="w-4 h-4" /> Hooks
                     </TabButton>
-                    <TabButton active={activeTab === 'elements'} onClick={() => setActiveTab('elements')}>
-                         <div className="flex items-center gap-2"><TagIcon className="w-4 h-4" /> Key Elements</div>
+                    <TabButton 
+                        id="tab-scenes"
+                        controls="panel-scenes"
+                        active={activeTab === 'scenes'} 
+                        onClick={() => setActiveTab('scenes')}
+                    >
+                         <FilmIcon className="w-4 h-4" /> Scenes
                     </TabButton>
-                    <TabButton active={activeTab === 'tone'} onClick={() => setActiveTab('tone')}>
-                         <div className="flex items-center gap-2"><SmileIcon className="w-4 h-4" /> Emotional Tone</div>
+                    <TabButton 
+                        id="tab-audio"
+                        controls="panel-audio"
+                        active={activeTab === 'audio'} 
+                        onClick={() => setActiveTab('audio')}
+                    >
+                         <SoundWaveIcon className="w-4 h-4" /> Audio
                     </TabButton>
-                    {hasAudioAnalysis && (
-                        <TabButton active={activeTab === 'audio'} onClick={() => setActiveTab('audio')}>
-                            <div className="flex items-center gap-2"><SoundWaveIcon className="w-4 h-4" /> Audio Insights</div>
-                        </TabButton>
-                    )}
                 </div>
 
-                <div className="text-sm max-h-48 overflow-y-auto pr-2">
-                    {activeTab === 'scenes' && (
-                        <div className="space-y-3">
-                            {analysisResult.sceneDescriptions?.map((scene, i: number) => (
-                                <div key={i} className="flex gap-3">
-                                    <div className="font-mono text-indigo-400 whitespace-nowrap">{scene.timestamp}</div>
-                                    <p className="text-gray-300">{scene.description}</p>
+                <div className="relative min-h-[180px]">
+                    {activeTab === 'hooks' && (
+                        <div id="panel-hooks" role="tabpanel" aria-labelledby="tab-hooks" className="space-y-3 animate-fade-in-up">
+                            {analysisResult.hooks.map((hook, i) => (
+                                <div key={i} className="flex gap-4 items-start bg-black/40 p-4 rounded-2xl border border-white/5 hover:border-indigo-500/20 transition-all group/item">
+                                    <div className="w-7 h-7 rounded-xl bg-indigo-500/10 flex items-center justify-center text-[10px] font-black text-indigo-400 flex-shrink-0 group-hover/item:bg-indigo-500 group-hover/item:text-white transition-all shadow-inner">
+                                      {i + 1}
+                                    </div>
+                                    <p className="text-[12px] text-gray-300 font-medium leading-relaxed italic">"{hook}"</p>
                                 </div>
                             ))}
                         </div>
                     )}
-                    {activeTab === 'elements' && (
-                        <div className="flex flex-wrap gap-2">
-                            {analysisResult.keyObjects?.map((obj: string, i: number) => <span key={i} className="bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{obj}</span>)}
+                    {activeTab === 'scenes' && (
+                        <div id="panel-scenes" role="tabpanel" aria-labelledby="tab-scenes" className="space-y-4 animate-fade-in-up max-h-64 overflow-y-auto pr-3 custom-scrollbar">
+                            {analysisResult.sceneDescriptions.map((scene, i) => (
+                                <div key={i} className="flex gap-5 group/scene items-start bg-black/20 p-3 rounded-xl border border-white/[0.03]">
+                                    <span className="text-[10px] font-mono text-indigo-500 bg-indigo-500/5 px-2 py-1 rounded-lg mt-0.5 border border-indigo-500/10">{scene.timestamp}</span>
+                                    <div className="flex-grow">
+                                        <p className="text-[12px] text-gray-400 group-hover/scene:text-gray-200 transition-colors leading-relaxed font-medium">{scene.description}</p>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     )}
-                    {activeTab === 'tone' && (
-                         <div className="flex flex-wrap gap-2">
-                            {analysisResult.emotionalTone?.map((tone: string, i: number) => <span key={i} className="bg-purple-800 text-purple-200 px-2 py-1 rounded-full">{tone}</span>)}
-                        </div>
-                    )}
-                    {activeTab === 'audio' && hasAudioAnalysis && analysisResult.audioAnalysis && (
-                        <div className="space-y-4">
-                            <div>
-                                <h5 className="font-semibold text-gray-400 mb-1">Speech Summary</h5>
-                                <p className="text-gray-300">{analysisResult.audioAnalysis.summary}</p>
+                    {activeTab === 'audio' && analysisResult.audioAnalysis && (
+                        <div id="panel-audio" role="tabpanel" aria-labelledby="tab-audio" className="space-y-6 animate-fade-in-up">
+                            <div className="p-5 bg-black/40 rounded-3xl border border-white/5 shadow-inner">
+                              <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest block mb-3 opacity-60">Linguistic Summary</span>
+                              <p className="text-[12px] text-gray-300 leading-relaxed font-medium italic">"{analysisResult.audioAnalysis.summary}"</p>
                             </div>
-                            {analysisResult.audioAnalysis.keyPhrases?.length > 0 && <div>
-                                <h5 className="font-semibold text-gray-400 mb-2">Key Phrases</h5>
-                                <div className="flex flex-wrap gap-2">
-                                    {analysisResult.audioAnalysis.keyPhrases?.map((phrase, i) => <span key={i} className="bg-blue-800 text-blue-200 px-2 py-1 rounded-full">{phrase}</span>)}
-                                </div>
-                            </div>}
-                             {analysisResult.audioAnalysis.callsToAction?.length > 0 && <div>
-                                <h5 className="font-semibold text-gray-400 mb-2">Calls to Action</h5>
-                                <div className="flex flex-wrap gap-2">
-                                    {analysisResult.audioAnalysis.callsToAction?.map((cta, i) => <span key={i} className="bg-green-800 text-green-200 px-2 py-1 rounded-full">{cta}</span>)}
-                                </div>
-                            </div>}
+                            
+                            <div className="space-y-3">
+                              <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest block px-1">Conversion Keywords</span>
+                              <div className="flex flex-wrap gap-2">
+                                  {analysisResult.audioAnalysis.keyPhrases.map((phrase, i) => (
+                                      <span key={i} className="px-4 py-1.5 bg-indigo-500/5 border border-indigo-500/10 rounded-xl text-[10px] font-black text-indigo-300 uppercase tracking-widest hover:bg-indigo-500 hover:text-white transition-all cursor-default">{phrase}</span>
+                                  ))}
+                              </div>
+                            </div>
                         </div>
                     )}
                 </div>
