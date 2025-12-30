@@ -73,17 +73,19 @@ const parseTimestamp = (timestamp: string): { start: number; end: number, durati
 };
 
 
-// Main processing function for creating ad creatives
-export const processVideoWithCreative = async (
-    sourceVideos: File[], // MODIFIED: Accept an array of files
+// ... (keep existing imports and functions)
+
+// Main processing function for creating ad creatives from a plan
+export const processVideoWithPlan = async (
     adCreative: AdCreative,
-    onProgress: (progress: { progress: number; message: string }) => void,
-    onLog: (log: string) => void
+    sourceVideos: File[],
+    onProgress: (progress: number) => void
 ): Promise<Blob> => {
-    onProgress({ progress: 0, message: 'Loading FFmpeg...' });
+    const onLog = (log: string) => console.log(`[FFmpeg]: ${log}`);
+    onProgress(0);
     const ffmpegInstance = await loadFFmpeg(onLog);
     await ensureFontIsLoaded(onLog);
-    onProgress({ progress: 0.1, message: 'FFmpeg loaded. Preparing video assets...' });
+    onProgress(0.1);
 
     // Write all source videos to the FFmpeg filesystem
     for (const videoFile of sourceVideos) {
@@ -101,14 +103,11 @@ export const processVideoWithCreative = async (
         const { start, duration } = parseTimestamp(scene.timestamp);
         const outputSceneFile = `scene_${i}.mp4`;
         
-        onProgress({
-            progress: 0.1 + (0.6 * (i / totalScenes)),
-            message: `Processing Scene ${i + 1}/${totalScenes} from ${scene.sourceFile}...`,
-        });
+        onProgress(0.1 + (0.6 * (i / totalScenes)));
 
         const vf_filters: string[] = [];
 
-        if (scene.edit.toLowerCase().includes('quick zoom')) {
+        if (scene.edit && scene.edit.toLowerCase().includes('quick zoom')) {
             vf_filters.push(`zoompan=z='min(zoom+0.0015,1.2)':d=${Math.ceil(duration * 25)}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1280x720`);
         }
         
@@ -119,10 +118,10 @@ export const processVideoWithCreative = async (
         }
 
         const command = [
-            '-i', scene.sourceFile, // MODIFIED: Use the source file specified for the scene
+            '-i', scene.sourceFile,
             '-ss', String(start), 
             '-t', String(duration),
-            '-an', // remove audio for visual processing
+            '-an',
         ];
         
         if (vf_filters.length > 0) {
@@ -136,10 +135,9 @@ export const processVideoWithCreative = async (
         sceneDurations.push(duration);
     }
     
-    onProgress({ progress: 0.7, message: 'Applying transitions...' });
+    onProgress(0.7);
 
     if (sceneFiles.length === 1) {
-        // If only one scene, just use it and add audio
         await ffmpegInstance.exec([
             '-i', sceneFiles[0],
             '-i', primaryAudioSource,
@@ -147,7 +145,6 @@ export const processVideoWithCreative = async (
             '-shortest', '-y', 'output.mp4'
         ]);
     } else {
-        // Build complex filter for transitions if multiple scenes
         const transitionDuration = 0.5;
         let filterComplex = '';
         let lastStream = '[0:v]';
@@ -171,9 +168,8 @@ export const processVideoWithCreative = async (
             '-map', lastStream, '-y', 'output_no_audio.mp4'
         ]);
 
-        onProgress({ progress: 0.9, message: `Adding audio from ${primaryAudioSource}...` });
+        onProgress(0.9);
         
-        // Re-attach the audio stream from the primary video
         await ffmpegInstance.exec([
             '-i', 'output_no_audio.mp4',
             '-i', primaryAudioSource,
@@ -183,11 +179,10 @@ export const processVideoWithCreative = async (
         await ffmpegInstance.deleteFile('output_no_audio.mp4');
     }
 
-    onProgress({ progress: 0.95, message: 'Finalizing video...' });
+    onProgress(0.95);
 
     const outputData = await ffmpegInstance.readFile('output.mp4');
     
-    // Cleanup all files
     for (const videoFile of sourceVideos) {
         await ffmpegInstance.deleteFile(videoFile.name);
     }
@@ -196,10 +191,14 @@ export const processVideoWithCreative = async (
         await ffmpegInstance.deleteFile(f);
     }
 
-    onProgress({ progress: 1, message: 'Processing complete!' });
+    onProgress(1);
 
     return new Blob([ (outputData as Uint8Array).buffer ], { type: 'video/mp4' });
 };
+
+
+// --- Advanced Manual Editor ---
+// ... (keep the rest of the file)
 
 
 // --- Advanced Manual Editor ---

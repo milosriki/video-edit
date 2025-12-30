@@ -414,6 +414,29 @@ export const researchMarketTrends = async (query: string) => {
   return { text: response.text || "", sources: grounding.map((g: any) => ({ title: g.web?.title || 'Source', uri: g.web?.uri || '#' })) };
 };
 
+export const refreshViralHooks = async (avatarKey: string) => {
+  const avatar = (AVATARS as any)[avatarKey];
+  const query = `Viral fitness trends and hooks for ${avatar?.name || 'fitness'} on TikTok/Reels`;
+  const response = await ai.models.generateContent({
+    model: fastModel,
+    contents: [{ text: query }],
+    config: { tools: [{ googleSearch: {} }] }
+  });
+  const grounding = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+  return { text: response.text || "", sources: grounding.map((g: any) => ({ title: g.web?.title || 'Source', uri: g.web?.uri || '#' })) };
+};
+
+export const auditCompliance = async (copy: string) => {
+  const query = `Check this ad copy against Meta Advertising Policies 2025: "${copy}"`;
+  const response = await ai.models.generateContent({
+    model: fastModel,
+    contents: [{ text: query }],
+    config: { tools: [{ googleSearch: {} }] }
+  });
+  const grounding = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+  return { text: response.text || "", sources: grounding.map((g: any) => ({ title: g.web?.title || 'Source', uri: g.web?.uri || '#' })) };
+};
+
 export const optimizeSystemPrompt = async (original: string): Promise<PromptOptimization> => {
   const prompt = `ACT AS NEURAL PROMPT ENGINEER. REWRITE FOR ROI.`;
   const response = await ai.models.generateContent({

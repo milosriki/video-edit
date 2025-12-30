@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { researchMarketTrends } from '../services/geminiService';
+import { apiClient } from '../services/apiClient';
 import { formatErrorMessage } from '../utils/error';
 import { EyeIcon, SparklesIcon, CheckIcon } from './icons';
 
@@ -16,7 +16,7 @@ const AdResearcher: React.FC = () => {
         setError(null);
         setResult(null);
         try {
-            const data = await researchMarketTrends(query);
+            const data = await apiClient.researchMarketTrends(query);
             setResult(data);
         } catch (err) {
             setError(formatErrorMessage(err));

@@ -13,6 +13,8 @@ import RepositoryGenerator from './components/RepositoryGenerator';
 import CreativeLab from './components/CreativeLab';
 import NeuralLab from './components/NeuralLab';
 import ToolOrchestrator from './components/ToolOrchestrator';
+import ViralCenter from './components/ViralCenter';
+import ComplianceAuditor from './components/ComplianceAuditor';
 import { 
   SparklesIcon, BarChartIcon, WandIcon, VideoIcon, ImageIcon, 
   HeadphonesIcon, MessageSquareIcon, GridIcon, EyeIcon, 
@@ -20,7 +22,7 @@ import {
 } from './components/icons';
 
 type Sector = 'build' | 'strategize' | 'analyze';
-type ToolId = 'workflow' | 'video' | 'image' | 'audio' | 'storyboard' | 'research' | 'war-room' | 'analytics' | 'intel' | 'project-architect' | 'creative-lab' | 'neural-lab' | 'remote-tools';
+type ToolId = 'workflow' | 'video' | 'image' | 'audio' | 'storyboard' | 'research' | 'war-room' | 'analytics' | 'intel' | 'project-architect' | 'creative-lab' | 'neural-lab' | 'remote-tools' | 'viral' | 'compliance';
 
 export default function App() {
   const [activeTool, setActiveTool] = useState<ToolId>('workflow');
@@ -36,6 +38,8 @@ export default function App() {
     { id: 'intel', name: 'Prediction', icon: ShieldIcon, sector: 'strategize', desc: 'Viral Sim & Heatmaps' },
     { id: 'war-room', name: 'War Room', icon: MessageSquareIcon, sector: 'strategize', desc: 'Voice AI strategist' },
     { id: 'remote-tools', name: 'Remote Tools', icon: SlidersIcon, sector: 'strategize', desc: 'Connect Cloud Run APIs' },
+    { id: 'viral', name: 'Viral Trends', icon: SparklesIcon, sector: 'strategize', desc: 'Real-time hook generator' },
+    { id: 'compliance', name: 'Ad Auditor', icon: CheckIcon, sector: 'analyze', desc: 'Meta policy compliance check' },
     { id: 'analytics', name: 'Performance', icon: BarChartIcon, sector: 'analyze', desc: 'ROAS & CPA tracking' },
   ];
 
@@ -54,6 +58,8 @@ export default function App() {
       case 'analytics': return <PerformanceDashboard />;
       case 'neural-lab': return <NeuralLab />;
       case 'remote-tools': return <ToolOrchestrator />;
+      case 'viral': return <ViralCenter />;
+      case 'compliance': return <ComplianceAuditor />;
       default: return <AdWorkflow />;
     }
   };
