@@ -1,45 +1,85 @@
+
 /**
- * Formats an error object into a user-friendly string.
- * @param error The error object, which can be of any type.
- * @returns A string suitable for display in the UI.
+ * PTD Global Error Resilience Utility
+ * Maps technical exceptions to actionable human directives.
  */
-export const formatErrorMessage = (error: unknown): string => {
-    if (error instanceof Error) {
-        const message = error.message;
-        const lowerMessage = message.toLowerCase();
+export type ErrorCategory = 'DRIVE_AUTH' | 'DRIVE_IO' | 'GEMINI_THROTTLED' | 'GEMINI_LOGIC' | 'FFMPEG_MEMORY' | 'FFMPEG_ENCODE' | 'NETWORK' | 'UNKNOWN';
 
-        // Allow specific, user-friendly messages from the app to pass through
-        if (message.startsWith("No silent segments found") || message.startsWith("No segments found matching")) {
-            return message;
-        }
+export interface ActionableError {
+    category: ErrorCategory;
+    message: string;
+    actionLabel?: string;
+    technicalDetails?: string;
+}
 
-        if (lowerMessage.includes("api key")) {
-            return "The Gemini API key is not configured. Please contact the administrator.";
-        }
-        
-        if (lowerMessage.includes("format") || lowerMessage.includes("parse")) {
-            return "The AI provided a response in an unexpected format. This can be a temporary issue. Please try your request again.";
-        }
+export const mapErrorToAction = (error: unknown): ActionableError => {
+    const err = error instanceof Error ? error : new Error(String(error));
+    const msg = err.message.toLowerCase();
 
-        if (lowerMessage.includes("failed to fetch")) {
-            return "Could not connect to the API. Please check your internet connection and try again.";
-        }
-        
-        if (lowerMessage.includes("ffmpeg") || lowerMessage.includes("processing")) {
-             return "Video processing failed. This might be due to an unsupported video format or a browser memory limitation. Please try again with a smaller video.";
-        }
-        
-        if (lowerMessage.includes("load video")) {
-            return "Could not load the video file. It might be corrupted or in an unsupported format.";
-        }
-
-        // Log the original error for debugging purposes
-        console.error("Unhandled Application Error:", error);
-        
-        // Return a generic but helpful message for all other cases
-        return "An unexpected error occurred. Please try again. If the problem persists, the specific error has been logged for review.";
+    // 1. Google Drive Specifics
+    if (msg.includes("unauthorized") || msg.includes("token") || msg.includes("401")) {
+        return {
+            category: 'DRIVE_AUTH',
+            message: "Cloud Credentials Expired. Your Drive connection has timed out.",
+            actionLabel: "RE-AUTHENTICATE DRIVE"
+        };
     }
-    
-    console.error("Unhandled Non-Error Thrown:", error);
-    return "An unknown error occurred. Please try again.";
+    if (msg.includes("requested entity was not found") || msg.includes("404")) {
+        return {
+            category: 'DRIVE_IO',
+            message: "Target Asset Missing. A file in your Drive folder may have been moved or deleted.",
+            actionLabel: "REFRESH FOLDER SCAN"
+        };
+    }
+
+    // 2. Gemini API / Model Specifics
+    if (msg.includes("429") || msg.includes("quota") || msg.includes("rate limit")) {
+        return {
+            category: 'GEMINI_THROTTLED',
+            message: "Intelligence Quota Exceeded. You've reached the Gemini 3 Pro burst limit.",
+            actionLabel: "WAIT 30 SECONDS"
+        };
+    }
+    if (msg.includes("parse") || msg.includes("format") || msg.includes("unexpected token")) {
+        return {
+            category: 'GEMINI_LOGIC',
+            message: "Neural Blueprint Corrupted. The model generated an invalid ad structure.",
+            actionLabel: "RE-RUN ARCHITECT"
+        };
+    }
+
+    // 3. Browser / FFmpeg / Hardware Specifics
+    if (msg.includes("memory") || msg.includes("buffer") || msg.includes("allocation")) {
+        return {
+            category: 'FFMPEG_MEMORY',
+            message: "Browser Memory Exhausted. The high-bitrate video render exceeded Chrome's sandbox limits.",
+            actionLabel: "USE SMALLER CLIPS"
+        };
+    }
+    if (msg.includes("ffmpeg") || msg.includes("encoder") || msg.includes("filter")) {
+        return {
+            category: 'FFMPEG_ENCODE',
+            message: "Master Render Collision. FFmpeg kernel failed to stitch the neural layers.",
+            actionLabel: "RE-INITIALIZE WASM"
+        };
+    }
+
+    // 4. Network
+    if (msg.includes("fetch") || msg.includes("network") || msg.includes("cors")) {
+        return {
+            category: 'NETWORK',
+            message: "Signal Interrupted. Check your local connection to the PTD Core.",
+            actionLabel: "CHECK WIFI"
+        };
+    }
+
+    return {
+        category: 'UNKNOWN',
+        message: "An unspecified anomaly occurred in the intelligence mesh.",
+        technicalDetails: err.message
+    };
+};
+
+export const formatErrorMessage = (error: unknown): string => {
+    return mapErrorToAction(error).message;
 };
