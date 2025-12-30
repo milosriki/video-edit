@@ -13,8 +13,6 @@ import RepositoryGenerator from './components/RepositoryGenerator';
 import CreativeLab from './components/CreativeLab';
 import NeuralLab from './components/NeuralLab';
 import ToolOrchestrator from './components/ToolOrchestrator';
-import ViralCenter from './components/ViralCenter';
-import ComplianceAuditor from './components/ComplianceAuditor';
 import { 
   SparklesIcon, BarChartIcon, WandIcon, VideoIcon, ImageIcon, 
   HeadphonesIcon, MessageSquareIcon, GridIcon, EyeIcon, 
@@ -22,12 +20,12 @@ import {
 } from './components/icons';
 
 type Sector = 'build' | 'strategize' | 'analyze';
-type ToolId = 'workflow' | 'video' | 'image' | 'audio' | 'storyboard' | 'research' | 'war-room' | 'analytics' | 'intel' | 'project-architect' | 'creative-lab' | 'neural-lab' | 'remote-tools' | 'viral' | 'compliance';
+type ToolId = 'workflow' | 'video' | 'image' | 'audio' | 'storyboard' | 'research' | 'war-room' | 'analytics' | 'intel' | 'project-architect' | 'creative-lab' | 'neural-lab' | 'remote-tools';
 
 export default function App() {
   const [activeTool, setActiveTool] = useState<ToolId>('workflow');
 
-  const navItems: { id: ToolId; name: string; icon: any; sector: Sector; desc: string }[] = [
+  const navItems: { id: ToolId; name: string; icon: any; sector: Sector; desc: string; badge?: boolean }[] = [
     { id: 'workflow', name: 'Ad Workflow', icon: WandIcon, sector: 'build', desc: 'Create direct response ads' },
     { id: 'creative-lab', name: 'Creative Lab', icon: ImageIcon, sector: 'build', desc: 'Replicate static winners' },
     { id: 'project-architect', name: 'Build Mode V2', icon: SparklesIcon, sector: 'build', desc: 'Generate full repositories' },
@@ -37,15 +35,13 @@ export default function App() {
     { id: 'research', name: 'Market Intel', icon: EyeIcon, sector: 'strategize', desc: 'Search grounded trends' },
     { id: 'intel', name: 'Prediction', icon: ShieldIcon, sector: 'strategize', desc: 'Viral Sim & Heatmaps' },
     { id: 'war-room', name: 'War Room', icon: MessageSquareIcon, sector: 'strategize', desc: 'Voice AI strategist' },
-    { id: 'remote-tools', name: 'Remote Tools', icon: SlidersIcon, sector: 'strategize', desc: 'Connect Cloud Run APIs' },
-    { id: 'viral', name: 'Viral Trends', icon: SparklesIcon, sector: 'strategize', desc: 'Real-time hook generator' },
-    { id: 'compliance', name: 'Ad Auditor', icon: CheckIcon, sector: 'analyze', desc: 'Meta policy compliance check' },
+    { id: 'remote-tools', name: 'Remote Tools', icon: SlidersIcon, sector: 'strategize', desc: 'Connect Cloud Run APIs', badge: true },
     { id: 'analytics', name: 'Performance', icon: BarChartIcon, sector: 'analyze', desc: 'ROAS & CPA tracking' },
   ];
 
   const renderTool = () => {
     switch (activeTool) {
-      case 'workflow': return <AdWorkflow />;
+      case 'workflow': return <AdWorkflow onNavigate={(id: ToolId) => setActiveTool(id)} />;
       case 'creative-lab': return <CreativeLab />;
       case 'project-architect': return <RepositoryGenerator />;
       case 'video': return <VideoStudio />;
@@ -58,9 +54,7 @@ export default function App() {
       case 'analytics': return <PerformanceDashboard />;
       case 'neural-lab': return <NeuralLab />;
       case 'remote-tools': return <ToolOrchestrator />;
-      case 'viral': return <ViralCenter />;
-      case 'compliance': return <ComplianceAuditor />;
-      default: return <AdWorkflow />;
+      default: return <AdWorkflow onNavigate={(id: ToolId) => setActiveTool(id)} />;
     }
   };
 
@@ -88,7 +82,7 @@ export default function App() {
                   <button
                     key={item.id}
                     onClick={() => setActiveTool(item.id)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group ${
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group relative ${
                       activeTool === item.id 
                       ? 'bg-indigo-600/10 text-white shadow-inner border border-white/5' 
                       : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'
@@ -99,6 +93,12 @@ export default function App() {
                       <div className="text-sm font-bold leading-none mb-1">{item.name}</div>
                       <div className={`text-[10px] transition-opacity ${activeTool === item.id ? 'text-indigo-300/60' : 'text-gray-600 group-hover:text-gray-500'}`}>{item.desc}</div>
                     </div>
+                    {item.badge && activeTool !== item.id && (
+                      <div className="absolute top-2 right-2 flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                      </div>
+                    )}
                     {activeTool === item.id && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.8)]"></div>}
                   </button>
                 ))}

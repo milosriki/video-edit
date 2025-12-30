@@ -73,19 +73,17 @@ const parseTimestamp = (timestamp: string): { start: number; end: number, durati
 };
 
 
-// ... (keep existing imports and functions)
-
-// Main processing function for creating ad creatives from a plan
-export const processVideoWithPlan = async (
+// Main processing function for creating ad creatives
+export const processVideoWithCreative = async (
+    sourceVideos: File[], // MODIFIED: Accept an array of files
     adCreative: AdCreative,
-    sourceVideos: File[],
-    onProgress: (progress: number) => void
+    onProgress: (progress: { progress: number; message: string }) => void,
+    onLog: (log: string) => void
 ): Promise<Blob> => {
-    const onLog = (log: string) => console.log(`[FFmpeg]: ${log}`);
-    onProgress(0);
+    onProgress({ progress: 0, message: 'Loading FFmpeg...' });
     const ffmpegInstance = await loadFFmpeg(onLog);
     await ensureFontIsLoaded(onLog);
-    onProgress(0.1);
+    onProgress({ progress: 0.1, message: 'FFmpeg loaded. Preparing video assets...' });
 
     // Write all source videos to the FFmpeg filesystem
     for (const videoFile of sourceVideos) {
@@ -103,11 +101,14 @@ export const processVideoWithPlan = async (
         const { start, duration } = parseTimestamp(scene.timestamp);
         const outputSceneFile = `scene_${i}.mp4`;
         
-        onProgress(0.1 + (0.6 * (i / totalScenes)));
+        onProgress({
+            progress: 0.1 + (0.6 * (i / totalScenes)),
+            message: `Processing Scene ${i + 1}/${totalScenes} from ${scene.sourceFile}...`,
+        });
 
         const vf_filters: string[] = [];
 
-        if (scene.edit && scene.edit.toLowerCase().includes('quick zoom')) {
+        if (scene.edit.toLowerCase().includes('quick zoom')) {
             vf_filters.push(`zoompan=z='min(zoom+0.0015,1.2)':d=${Math.ceil(duration * 25)}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1280x720`);
         }
         
@@ -118,10 +119,10 @@ export const processVideoWithPlan = async (
         }
 
         const command = [
-            '-i', scene.sourceFile,
+            '-i', scene.sourceFile, // MODIFIED: Use the source file specified for the scene
             '-ss', String(start), 
             '-t', String(duration),
-            '-an',
+            '-an', // remove audio for visual processing
         ];
         
         if (vf_filters.length > 0) {
@@ -135,9 +136,10 @@ export const processVideoWithPlan = async (
         sceneDurations.push(duration);
     }
     
-    onProgress(0.7);
+    onProgress({ progress: 0.7, message: 'Applying transitions...' });
 
     if (sceneFiles.length === 1) {
+        // If only one scene, just use it and add audio
         await ffmpegInstance.exec([
             '-i', sceneFiles[0],
             '-i', primaryAudioSource,
@@ -145,6 +147,7 @@ export const processVideoWithPlan = async (
             '-shortest', '-y', 'output.mp4'
         ]);
     } else {
+        // Build complex filter for transitions if multiple scenes
         const transitionDuration = 0.5;
         let filterComplex = '';
         let lastStream = '[0:v]';
@@ -168,8 +171,9 @@ export const processVideoWithPlan = async (
             '-map', lastStream, '-y', 'output_no_audio.mp4'
         ]);
 
-        onProgress(0.9);
+        onProgress({ progress: 0.9, message: `Adding audio from ${primaryAudioSource}...` });
         
+        // Re-attach the audio stream from the primary video
         await ffmpegInstance.exec([
             '-i', 'output_no_audio.mp4',
             '-i', primaryAudioSource,
@@ -179,10 +183,11 @@ export const processVideoWithPlan = async (
         await ffmpegInstance.deleteFile('output_no_audio.mp4');
     }
 
-    onProgress(0.95);
+    onProgress({ progress: 0.95, message: 'Finalizing video...' });
 
     const outputData = await ffmpegInstance.readFile('output.mp4');
     
+    // Cleanup all files
     for (const videoFile of sourceVideos) {
         await ffmpegInstance.deleteFile(videoFile.name);
     }
@@ -191,14 +196,10 @@ export const processVideoWithPlan = async (
         await ffmpegInstance.deleteFile(f);
     }
 
-    onProgress(1);
+    onProgress({ progress: 1, message: 'Processing complete!' });
 
     return new Blob([ (outputData as Uint8Array).buffer ], { type: 'video/mp4' });
 };
-
-
-// --- Advanced Manual Editor ---
-// ... (keep the rest of the file)
 
 
 // --- Advanced Manual Editor ---

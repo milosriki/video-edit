@@ -11,7 +11,7 @@ import {
   rankCreatives, 
   getAvatars
 } from './services/geminiService.js';
-import type { CampaignBrief, CampaignStrategy, AdCreative } from './types';
+import type { CampaignBrief, CampaignStrategy, AdCreative } from '../../../types';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

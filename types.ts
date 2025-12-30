@@ -163,16 +163,9 @@ export interface CampaignBrief {
     angle: string;
     cta: string;
     tone: 'direct'|'empathetic'|'authoritative'|'playful'|'inspirational';
-    framework?: MarketingFramework;
+    framework: MarketingFramework;
     goals?: string[];
     platform: 'reels'|'shorts'|'tiktok'|'feed'|'stories';
-    complianceRules?: string[];
-    serviceName?: string;
-    idealClient?: string;
-    coreBenefits?: string;
-    uniqueSellingPoint?: string;
-    painPoints?: string;
-    emotionalResponse?: string;
 }
 
 export interface Avatar {
