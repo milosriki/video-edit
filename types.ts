@@ -1,6 +1,24 @@
 
 export type MarketingFramework = 'AIDA' | 'PAS' | 'HSO' | 'Direct-Offer';
 
+export interface RemoteToolConfig {
+  id: string;
+  name: string;
+  endpoint: string;
+  description: string;
+  status: 'online' | 'offline' | 'error';
+  lastPing?: string;
+}
+
+export interface ToolExecution {
+  id: string;
+  toolName: string;
+  params: any;
+  result: any;
+  timestamp: string;
+  status: 'success' | 'failed';
+}
+
 export interface RepoFile {
   path: string;
   content: string;

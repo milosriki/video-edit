@@ -1,9 +1,9 @@
 
-import { GoogleGenAI, Type, Chat, Modality, GenerateContentResponse } from "@google/genai";
+import { GoogleGenAI, Type, Chat, Modality, GenerateContentResponse, FunctionDeclaration } from "@google/genai";
 import { 
   StoryboardPanel, TranscribedWord, CampaignBrief, CampaignStrategy, 
   AdCreative, CreativeRanking, Avatar, Repository,
-  CreativeVariation, PromptOptimization, AutonomousTask
+  CreativeVariation, PromptOptimization, AutonomousTask, RemoteToolConfig
 } from '../types';
 import { fileToBase64 } from "../utils/files";
 import { AVATARS, COPY_DATABASE } from "../constants/knowledge";
@@ -22,11 +22,9 @@ const imageModel = 'gemini-2.5-flash-image';
 const extractJson = (text: string) => {
     if (!text) return null;
     try {
-        // Try direct parse first
         return JSON.parse(text);
     } catch (e) {
         try {
-            // Find the first '{' or '[' and the last '}' or ']'
             const startIdx = Math.min(
               text.indexOf('{') === -1 ? Infinity : text.indexOf('{'),
               text.indexOf('[') === -1 ? Infinity : text.indexOf('[')
@@ -45,6 +43,57 @@ const extractJson = (text: string) => {
         }
     }
     return null;
+};
+
+// --- REMOTE TOOL ORCHESTRATION ---
+
+export const executeRemoteTool = async (tool: RemoteToolConfig, adId: string): Promise<any> => {
+    const response = await fetch(tool.endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ad_id: adId, date_range: 'last_7_days' })
+    });
+    if (!response.ok) throw new Error(`Remote Tool Error: ${response.statusText}`);
+    return await response.json();
+};
+
+export const orchestrateWithRemoteTools = async (prompt: string, remoteTools: RemoteToolConfig[]) => {
+    // Define standard function declarations for the tools
+    const functionDeclarations: FunctionDeclaration[] = remoteTools.map(tool => ({
+        name: tool.id,
+        parameters: {
+            type: Type.OBJECT,
+            description: tool.description,
+            properties: {
+                ad_id: { type: Type.STRING, description: 'The unique identifier for the ad creative.' },
+                date_range: { type: Type.STRING, description: 'The period to analyze (e.g., last_30_days).' }
+            },
+            required: ['ad_id']
+        }
+    }));
+
+    const response = await ai.models.generateContent({
+        model: proModel,
+        contents: [{ parts: [{ text: prompt }] }],
+        config: {
+            tools: functionDeclarations.length > 0 ? [{ functionDeclarations }] : undefined
+        }
+    });
+
+    const calls = response.functionCalls;
+    if (calls && calls.length > 0) {
+        const results = [];
+        for (const call of calls) {
+            const toolConfig = remoteTools.find(t => t.id === call.name);
+            if (toolConfig) {
+                const result = await executeRemoteTool(toolConfig, (call.args as any).ad_id);
+                results.push({ name: call.name, id: call.id, result });
+            }
+        }
+        return { type: 'function_results', data: results };
+    }
+
+    return { type: 'text', data: response.text };
 };
 
 // --- MULTIMODAL INTELLIGENCE ---

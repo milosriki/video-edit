@@ -12,14 +12,15 @@ import IntelligenceSuite from './components/IntelligenceSuite';
 import RepositoryGenerator from './components/RepositoryGenerator';
 import CreativeLab from './components/CreativeLab';
 import NeuralLab from './components/NeuralLab';
+import ToolOrchestrator from './components/ToolOrchestrator';
 import { 
   SparklesIcon, BarChartIcon, WandIcon, VideoIcon, ImageIcon, 
   HeadphonesIcon, MessageSquareIcon, GridIcon, EyeIcon, 
-  KeyIcon, CheckIcon, GoogleDriveIcon, ShieldIcon, UsersIcon
+  KeyIcon, CheckIcon, GoogleDriveIcon, ShieldIcon, UsersIcon, SlidersIcon
 } from './components/icons';
 
 type Sector = 'build' | 'strategize' | 'analyze';
-type ToolId = 'workflow' | 'video' | 'image' | 'audio' | 'storyboard' | 'research' | 'war-room' | 'analytics' | 'intel' | 'project-architect' | 'creative-lab' | 'neural-lab';
+type ToolId = 'workflow' | 'video' | 'image' | 'audio' | 'storyboard' | 'research' | 'war-room' | 'analytics' | 'intel' | 'project-architect' | 'creative-lab' | 'neural-lab' | 'remote-tools';
 
 export default function App() {
   const [activeTool, setActiveTool] = useState<ToolId>('workflow');
@@ -34,6 +35,7 @@ export default function App() {
     { id: 'research', name: 'Market Intel', icon: EyeIcon, sector: 'strategize', desc: 'Search grounded trends' },
     { id: 'intel', name: 'Prediction', icon: ShieldIcon, sector: 'strategize', desc: 'Viral Sim & Heatmaps' },
     { id: 'war-room', name: 'War Room', icon: MessageSquareIcon, sector: 'strategize', desc: 'Voice AI strategist' },
+    { id: 'remote-tools', name: 'Remote Tools', icon: SlidersIcon, sector: 'strategize', desc: 'Connect Cloud Run APIs' },
     { id: 'analytics', name: 'Performance', icon: BarChartIcon, sector: 'analyze', desc: 'ROAS & CPA tracking' },
   ];
 
@@ -51,6 +53,7 @@ export default function App() {
       case 'war-room': return <Assistant />;
       case 'analytics': return <PerformanceDashboard />;
       case 'neural-lab': return <NeuralLab />;
+      case 'remote-tools': return <ToolOrchestrator />;
       default: return <AdWorkflow />;
     }
   };
