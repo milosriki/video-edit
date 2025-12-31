@@ -27,6 +27,17 @@ export const apiClient = {
     },
 
     async rankCreatives(brief: CampaignBrief, avatarKey: string, creatives: AdCreative[]): Promise<CreativeRanking[]> {
-        return gemini.rankCreativesLocal(creatives, avatarKey);
+        return gemini.rankCreativesLocal(brief, avatarKey, creatives);
     },
+
+    async fetchFacebookInsights(startDate: string, endDate: string) {
+        return gemini.fetchFacebookInsights(startDate, endDate);
+    },
+
+    async fetchHubSpotRoi(adId: string) {
+        const endpoint = 'https://ad-alpha-mcp-489769736562.us-central1.run.app';
+        const response = await fetch(`${endpoint}/hubspot/roi?ad_id=${adId}`);
+        if (!response.ok) throw new Error('Failed to fetch HubSpot ROI');
+        return await response.json();
+    }
 };

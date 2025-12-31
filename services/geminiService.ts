@@ -334,3 +334,30 @@ export const rankCreativesLocal = async (c: AdCreative[], ak: string) => {
     onThinkingStateChange?.(false);
     return safeParse(response.text, []);
 };
+
+export const executeRemoteTool = async (tool: any, args: any): Promise<any> => {
+    const isGet = tool.id === 'fetch_facebook_insights' || tool.id === 'get_hubspot_roi';
+    const baseUrl = 'https://ad-alpha-mcp-489769736562.us-central1.run.app';
+    
+    let url = tool.endpoint || baseUrl;
+    if (tool.id === 'fetch_facebook_insights') {
+        url = `${baseUrl}/facebook/insights?start_date=${args.start_date || '2025-12-01'}&end_date=${args.end_date || '2025-12-30'}`;
+    } else if (tool.id === 'get_hubspot_roi') {
+        url = `${baseUrl}/hubspot/roi?ad_id=${args.ad_id}`;
+    }
+
+    const response = await fetch(url, {
+        method: isGet ? 'GET' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: isGet ? undefined : JSON.stringify({ ...args })
+    });
+    if (!response.ok) throw new Error(`Remote Tool Error: ${response.statusText}`);
+    return await response.json();
+};
+
+export const fetchFacebookInsights = async (startDate: string, endDate: string) => {
+    const endpoint = 'https://ad-alpha-mcp-489769736562.us-central1.run.app';
+    const response = await fetch(`${endpoint}/facebook/insights?start_date=${startDate}&end_date=${endDate}`);
+    if (!response.ok) throw new Error('Failed to fetch Facebook insights');
+    return await response.json();
+};

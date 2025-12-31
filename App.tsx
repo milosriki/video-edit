@@ -26,7 +26,7 @@ type Sector = 'build' | 'strategize' | 'analyze';
 type ToolId = 'workflow' | 'video' | 'image' | 'audio' | 'storyboard' | 'research' | 'deep-research' | 'war-room' | 'analytics' | 'intel' | 'project-architect' | 'creative-lab' | 'neural-lab' | 'remote-tools' | 'connections' | 'verification';
 
 export default function App() {
-  const [activeTool, setActiveTool] = useState<ToolId>('workflow');
+  const [activeTool, setActiveTool] = useState<ToolId>('analytics');
   const [hasKey, setHasKey] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -55,7 +55,7 @@ export default function App() {
     { id: 'war-room', name: 'War Room', icon: MessageSquareIcon, sector: 'strategize', desc: 'Voice AI strategist' },
     { id: 'remote-tools', name: 'AdAlpha 360', icon: SlidersIcon, sector: 'strategize', desc: 'MCP Intel Node', badge: true },
     { id: 'verification', name: 'Model Verify', icon: ShieldIcon, sector: 'analyze', desc: 'AI GSI Verification Suite', badge: true },
-    { id: 'analytics', name: 'Performance', icon: BarChartIcon, sector: 'analyze', desc: 'ROAS & CPA tracking' },
+    { id: 'analytics', name: 'Live Intelligence', icon: BarChartIcon, sector: 'analyze', desc: 'Real-time ROAS (HubSpot)', badge: true },
     { id: 'connections', name: 'Connections', icon: KeyIcon, sector: 'analyze', desc: 'Manage API Bridges' },
   ];
 
