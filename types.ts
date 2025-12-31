@@ -1,5 +1,6 @@
 
 export type MarketingFramework = 'AIDA' | 'PAS' | 'HSO' | 'Direct-Offer';
+export type AdPhase = 'HOOK' | 'MECHANISM' | 'PROOF' | 'ACTION';
 
 export interface RemoteToolConfig {
   id: string;
@@ -8,6 +9,15 @@ export interface RemoteToolConfig {
   description: string;
   status: 'online' | 'offline' | 'error';
   lastPing?: string;
+}
+
+export interface ConnectionStatus {
+  id: 'meta' | 'hubspot' | 'drive';
+  name: string;
+  connected: boolean;
+  apiKey?: string;
+  lastSync?: string;
+  accountName?: string;
 }
 
 export interface ToolExecution {
@@ -32,41 +42,6 @@ export interface Repository {
   files: RepoFile[];
 }
 
-export interface WinningCreative {
-  file: File;
-  previewUrl: string;
-  analysis?: string;
-  variations: CreativeVariation[];
-}
-
-export interface CreativeVariation {
-  id: string;
-  type: 'image' | 'video';
-  prompt: string;
-  reasoning: string;
-  generatedUrl?: string;
-  status: 'pending' | 'generating' | 'done' | 'error';
-}
-
-export interface PromptOptimization {
-  original: string;
-  optimized: string;
-  improvements: string[];
-  performancePrediction: number;
-}
-
-export interface AutonomousTask {
-  id: string;
-  goal: string;
-  steps: Array<{
-    action: string;
-    result: string;
-    critique?: string;
-    correction?: string;
-  }>;
-  status: 'running' | 'completed' | 'failed';
-}
-
 export interface AdCreative {
   primarySourceFileName: string;
   variationTitle: string;
@@ -84,11 +59,13 @@ export interface AdCreative {
 }
 
 export interface EditScene {
+  id: string;
   timestamp: string;
   visual: string;
   edit: string;
   overlayText?: string;
   sourceFile?: string;
+  phase?: AdPhase;
 }
 
 export interface VideoFile {
@@ -102,12 +79,6 @@ export interface VideoFile {
     loadingMessage?: string;
 }
 
-export interface AudioAnalysisResult {
-  summary: string;
-  keyPhrases: string[];
-  callsToAction: string[];
-}
-
 export interface VideoAnalysisResult {
     fileName: string;
     rank: number;
@@ -117,12 +88,11 @@ export interface VideoAnalysisResult {
     keyObjects: string[];
     emotionalTone: string[];
     hooks: string[];
-    angles: string[];
-    risks: string[];
-    sentiments: string[];
-    keyMoments?: Array<{ t: number; note: string }>;
-    veoHookSuggestion?: string;
-    audioAnalysis?: AudioAnalysisResult;
+    audioAnalysis?: {
+      summary: string;
+      keyPhrases: string[];
+      callsToAction: string[];
+    };
     uaeCompliance?: boolean;
 }
 
@@ -163,16 +133,8 @@ export interface CampaignBrief {
     angle: string;
     cta: string;
     tone: 'direct'|'empathetic'|'authoritative'|'playful'|'inspirational';
-    framework?: MarketingFramework;
-    goals?: string[];
+    framework: MarketingFramework;
     platform: 'reels'|'shorts'|'tiktok'|'feed'|'stories';
-    complianceRules?: string[];
-    serviceName?: string;
-    idealClient?: string;
-    coreBenefits?: string;
-    uniqueSellingPoint?: string;
-    painPoints?: string;
-    emotionalResponse?: string;
 }
 
 export interface Avatar {
@@ -195,4 +157,38 @@ export interface StoryboardPanel {
   description: string;
   image_prompt: string;
   imageUrl?: string;
+}
+
+export interface CreativeVariation {
+  id: string;
+  type: string;
+  prompt: string;
+  reasoning: string;
+  status?: 'pending' | 'generating' | 'done' | 'error';
+  generatedUrl?: string;
+}
+
+export interface PromptOptimization {
+  original: string;
+  optimized: string;
+  improvements: string[];
+  performancePrediction: number;
+}
+
+export interface AutonomousTask {
+  id: string;
+  goal: string;
+  steps: Array<{
+    action: string;
+    result: string;
+    critique?: string;
+  }>;
+  status: 'running' | 'completed' | 'failed';
+}
+
+export interface WinningCreative {
+  file: File;
+  previewUrl: string;
+  analysis?: string;
+  variations: CreativeVariation[];
 }

@@ -14,6 +14,9 @@ export default defineConfig(({ mode }) => {
       port: 3000,
       host: '0.0.0.0',
       headers: {
+        // 'require-corp' and 'same-origin' are needed for SharedArrayBuffer (FFmpeg)
+        // Note: This often blocks Google/FB OAuth popups. 
+        // In a production setup, you would use a dedicated subdomain or reverse proxy for Auth.
         'Cross-Origin-Embedder-Policy': 'require-corp',
         'Cross-Origin-Opener-Policy': 'same-origin',
       },

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { generateVideo, understandVideo } from '../services/geminiService';
 import { formatErrorMessage } from '../utils/error';
@@ -142,11 +143,13 @@ const VeoGenerator: React.FC = () => {
                     )}
                     {outputUrl && (
                         <div>
-                             <video src={outputUrl} controls className="w-full rounded-lg aspect-video mb-4"></video>
-                             <a href={outputUrl} download={`veo_video_${Date.now()}.mp4`} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-all">
-                                <DownloadIcon className="w-5 h-5"/>
-                                Download Video
-                            </a>
+                             <VideoPlayer src={outputUrl} />
+                             <div className="mt-4">
+                               <a href={outputUrl} download={`veo_video_${Date.now()}.mp4`} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-3 px-4 rounded-2xl flex items-center justify-center gap-3 transition-all">
+                                  <DownloadIcon className="w-5 h-5"/>
+                                  DOWNLOAD VEO CLIP
+                                </a>
+                             </div>
                         </div>
                     )}
                  </div>

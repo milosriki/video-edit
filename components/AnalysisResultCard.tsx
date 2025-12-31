@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { VideoFile } from '../types';
-import { EyeIcon, FilmIcon, SoundWaveIcon, SparklesIcon, PlayIcon, CheckIcon, ScissorsIcon } from './icons';
+import { EyeIcon, FilmIcon, SoundWaveIcon, SparklesIcon, PlayIcon, CheckIcon, ScissorsIcon, SlidersIcon } from './icons';
 import VideoPlayer from './VideoPlayer';
 
 interface AnalysisResultCardProps {
@@ -44,7 +44,12 @@ const ToolButton: React.FC<{ onClick: () => void; children: React.ReactNode, cla
     </button>
 );
 
-const AnalysisResultCard: React.FC<AnalysisResultCardProps> = ({ videoFile, onOpenCutter }) => {
+const AnalysisResultCard: React.FC<AnalysisResultCardProps> = ({ 
+  videoFile, 
+  onGenerateBlueprints, 
+  onOpenCutter, 
+  onOpenAdvancedEditor 
+}) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<'hooks' | 'scenes' | 'audio'>('hooks');
   const [showPlayer, setShowPlayer] = useState(false);
@@ -80,7 +85,7 @@ const AnalysisResultCard: React.FC<AnalysisResultCardProps> = ({ videoFile, onOp
                         </div>
 
                         {isAnalyzed && (
-                            <div className="absolute -top-3 -right-3 w-11 h-11 rounded-full bg-indigo-600 flex flex-col items-center justify-center shadow-2xl z-10 border-4 border-[#0a0a0f]">
+                            <div className="absolute -top-3 -right-3 w-11 h-11 rounded-full bg-indigo-600 flex flex-col items-center justify-center shadow-2xl z-10 border-4 border-[#020617]">
                                 <span className="text-[8px] font-black leading-none opacity-60">RANK</span>
                                 <span className="text-sm font-black text-white leading-none">{rank}</span>
                             </div>
@@ -144,13 +149,25 @@ const AnalysisResultCard: React.FC<AnalysisResultCardProps> = ({ videoFile, onOp
             )}
             
             {isAnalyzed && (
-                <div className="mt-8 flex gap-3">
+                <div className="mt-8 flex flex-wrap gap-3">
                     <ToolButton onClick={() => setIsExpanded(!isExpanded)} icon={<EyeIcon className="w-4 h-4"/>} className="bg-white/5 hover:bg-white/10 text-gray-400">
                         {isExpanded ? 'Minimize Intel' : 'Deconstruct Assets'}
                     </ToolButton>
                     <ToolButton onClick={onOpenCutter} icon={<ScissorsIcon className="w-4 h-4"/>} className="bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border-indigo-500/20">
                         Neural Cutter
                     </ToolButton>
+                    <ToolButton onClick={onOpenAdvancedEditor} icon={<SlidersIcon className="w-4 h-4"/>} className="bg-purple-600/10 hover:bg-purple-600/20 text-purple-400 border-purple-500/20">
+                        Neural Editor
+                    </ToolButton>
+                    {isTopRanked && (
+                        <button 
+                            onClick={onGenerateBlueprints} 
+                            className="flex-grow bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase tracking-[0.2em] py-3.5 rounded-2xl shadow-xl shadow-indigo-500/30 transition-all flex items-center justify-center gap-2"
+                        >
+                            <SparklesIcon className="w-4 h-4" /> 
+                            Architect Blueprints
+                        </button>
+                    )}
                 </div>
             )}
         </div>
