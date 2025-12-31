@@ -361,3 +361,14 @@ export const fetchFacebookInsights = async (startDate: string, endDate: string) 
     if (!response.ok) throw new Error('Failed to fetch Facebook insights');
     return await response.json();
 };
+
+export const sendMcpSignal = async (signal: string): Promise<string> => {
+    onThinkingStateChange?.(true, "Transmitting Satellite Command...");
+    const response = await ai.models.generateContent({
+        model: fastModel,
+        contents: signal,
+        config: getGSIConfig('MINIMAL')
+    });
+    onThinkingStateChange?.(false);
+    return response.text || "SIGNAL_ACK_EMPTY";
+};

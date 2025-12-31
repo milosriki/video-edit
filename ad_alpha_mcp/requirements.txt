@@ -1,4 +1,6 @@
 fastapi
 uvicorn
-requests
 pydantic
+facebook-business
+requests
+gunicorn

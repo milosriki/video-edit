@@ -14,16 +14,17 @@ import CreativeLab from './components/CreativeLab';
 import NeuralLab from './components/NeuralLab';
 import ToolOrchestrator from './components/ToolOrchestrator';
 import ConnectionCenter from './components/ConnectionCenter';
+import CLISyncNode from './components/CLISyncNode';
 import { ModelVerifier } from './components/ModelVerifier';
 import { DeepThinkingToast } from './components/DeepThinkingToast';
 import { 
   SparklesIcon, BarChartIcon, WandIcon, VideoIcon, ImageIcon, 
   HeadphonesIcon, MessageSquareIcon, GridIcon, EyeIcon, 
-  KeyIcon, CheckIcon, GoogleDriveIcon, ShieldIcon, UsersIcon, SlidersIcon, GlobeIcon
+  KeyIcon, CheckIcon, GoogleDriveIcon, ShieldIcon, UsersIcon, SlidersIcon, GlobeIcon, TerminalIcon
 } from './components/icons';
 
 type Sector = 'build' | 'strategize' | 'analyze';
-type ToolId = 'workflow' | 'video' | 'image' | 'audio' | 'storyboard' | 'research' | 'deep-research' | 'war-room' | 'analytics' | 'intel' | 'project-architect' | 'creative-lab' | 'neural-lab' | 'remote-tools' | 'connections' | 'verification';
+type ToolId = 'workflow' | 'video' | 'image' | 'audio' | 'storyboard' | 'research' | 'deep-research' | 'war-room' | 'analytics' | 'intel' | 'project-architect' | 'creative-lab' | 'neural-lab' | 'remote-tools' | 'connections' | 'verification' | 'cli-satellite';
 
 export default function App() {
   const [activeTool, setActiveTool] = useState<ToolId>('analytics');
@@ -54,6 +55,7 @@ export default function App() {
     { id: 'intel', name: 'Prediction', icon: ShieldIcon, sector: 'strategize', desc: 'Viral Sim & Heatmaps' },
     { id: 'war-room', name: 'War Room', icon: MessageSquareIcon, sector: 'strategize', desc: 'Voice AI strategist' },
     { id: 'remote-tools', name: 'AdAlpha 360', icon: SlidersIcon, sector: 'strategize', desc: 'MCP Intel Node', badge: true },
+    { id: 'cli-satellite', name: 'CLI Satellite', icon: TerminalIcon, sector: 'strategize', desc: 'Mini CLI Bridge', badge: true },
     { id: 'verification', name: 'Model Verify', icon: ShieldIcon, sector: 'analyze', desc: 'AI GSI Verification Suite', badge: true },
     { id: 'analytics', name: 'Live Intelligence', icon: BarChartIcon, sector: 'analyze', desc: 'Real-time ROAS (HubSpot)', badge: true },
     { id: 'connections', name: 'Connections', icon: KeyIcon, sector: 'analyze', desc: 'Manage API Bridges' },
@@ -77,6 +79,7 @@ export default function App() {
       case 'remote-tools': return <ToolOrchestrator />;
       case 'connections': return <ConnectionCenter />;
       case 'verification': return <ModelVerifier />;
+      case 'cli-satellite': return <CLISyncNode />;
       default: return <AdWorkflow onNavigate={(id: ToolId) => setActiveTool(id)} />;
     }
   };
